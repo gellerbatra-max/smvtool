@@ -1,0 +1,289 @@
+{
+  "spec": {
+    "name": "Allowance Policy Model (woven tops)",
+    "id": "wt-allowance-policy",
+    "version": "0.1.0",
+    "status": "draft-for-implementation",
+    "scope": "Element-level allowance policy converting basic time to standard time. Every number in this file is editable per factory; each carries a documented default, a cited range where published guidance exists, and an explicit status.",
+    "ip_provenance": "Allowance percentages here are drawn from the published ILO work-study literature (Kanawaty, ed., Introduction to Work Study, 4th rev. ed., ILO, Geneva, 1992, and secondary sources reproducing its recommended-allowance guidance) and from openly published apparel industrial-engineering practice. No licensed predetermined-motion-time database was used. Note the ILO's own position, quoted in the apparel IE literature: the ILO has not adopted and is not likely to adopt standards for the determination of allowances -- the figures below are recommendations and common practice, not a standard.",
+    "companion_documents": ["motion_model.md", "element_taxonomy.json"]
+  },
+
+  "conventions": {
+    "basis": "percent_of_basic_time",
+    "basis_note": "All percentages are applied to BASIC TIME (observed time already rated to 100% performance), not to shift time and not to standard time. If a factory prefers a percent-of-shift-time convention for personal needs, it must convert before entering the value here; the engine does not convert.",
+    "combination": "additive_then_single_multiplication",
+    "combination_formula": "ST_e = BT_e * (1 + sum over applicable categories of r_c)",
+    "combination_rationale": "Allowances are summed and applied once. They are never compounded multiplicatively; compounding is not supported by the work-study literature and inflates long operations.",
+    "scope": "per_element",
+    "scope_rationale": "Element-level application is what makes machine-delay allowance correct: it can be restricted to the machine-time component of an operation instead of being smeared over handling time. It also lets posture and attention allowances differ between a bundle element and a needle-point element.",
+    "time_components": ["handling", "machine", "bundle"],
+    "component_assignment": "Each element in element_taxonomy.json declares an allowance_profile (MANUAL_HANDLING, MACHINE_STATION, BUNDLE). The seam-segment time produced by the machine-overlap rule is split for allowance purposes: the machine-bound portion is component 'machine', the guidance-bound portion is component 'handling'. Which one is binding is already recorded in the audit trail."
+  },
+
+  "categories": [
+    {
+      "code": "PERSONAL",
+      "name": "Personal needs",
+      "description": "Water, toilet, wash-up and other unavoidable personal interruptions.",
+      "default_percent": 5.0,
+      "cited_range": [5.0, 7.0],
+      "range_basis": "ILO work-study guidance as reproduced in the peer-reviewed and practitioner literature: 5% for men and 7% for women; a 5% personal-needs allowance over shift hours is described as appropriate in apparel IE practice.",
+      "sources": ["ILO_WORK_STUDY", "FERREIRA_GARCIA_2019", "APPAREL_RESOURCES_ALLOWANCES"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true,
+      "notes": "Apply to the whole operation. Where a workforce is predominantly female, factories commonly adopt 7%; that is a policy decision, not an engineering one, and the tool must not choose it silently."
+    },
+    {
+      "code": "BASIC_FATIGUE",
+      "name": "Basic fatigue",
+      "description": "Constant allowance for the energy expended in doing the work at all, and for the monotony floor.",
+      "default_percent": 4.0,
+      "cited_range": [4.0, 4.0],
+      "range_basis": "A constant 4% basic-fatigue allowance applicable to both sexes is the figure carried in the ILO recommended-allowance guidance and reproduced consistently in the secondary literature.",
+      "sources": ["ILO_WORK_STUDY", "FERREIRA_GARCIA_2019", "CRONOMETRAS_ILO_GUIDE"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true,
+      "notes": "Together with PERSONAL this forms the constant relaxation allowance: 9% for men, 11% for women in the published guidance."
+    },
+    {
+      "code": "POSTURE",
+      "name": "Working posture",
+      "description": "Sustained posture penalty. The published tables give 2% for standing work; seated machine sewing with foot-pedal engagement sits below that but is not zero.",
+      "default_percent": 1.0,
+      "cited_range": [0.0, 4.0],
+      "range_basis": "Published posture allowances: standing 2%, stooping 2%, kneeling 3%, crawling 4%. Seated sewing is not itemised in those tables, hence a default of 1% by interpolation.",
+      "sources": ["ILO_WORK_STUDY", "CRONOMETRAS_ILO_GUIDE"],
+      "status": "calibration-pending",
+      "status_note": "The 1% default for seated machine sewing is an interpolation by this project, not a published figure. Factories running standing workstations or standing pressing should set 2%.",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true
+    },
+    {
+      "code": "AWKWARD_POSITION",
+      "name": "Abnormal or awkward position",
+      "description": "Reaching, twisting or bending beyond the neutral seated envelope; applies to specific elements, not to whole operations.",
+      "default_percent": 2.0,
+      "cited_range": [0.0, 7.0],
+      "range_basis": "Published variable-fatigue guidance for awkward posture: about 2% for bending, rising to about 7% for stretching. The ILO recommended-allowance table itemises slightly awkward, awkward (bending) and very awkward (lying, stretching) as increasing steps.",
+      "sources": ["APPAREL_RESOURCES_ALLOWANCES", "ILO_WORK_STUDY"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["handling", "bundle"], "element_profiles": ["MANUAL_HANDLING", "BUNDLE"]},
+      "editable": true,
+      "trigger_rule": "Engine default: apply only to elements whose largest reach parameter exceeds D_trunk_mm (i.e. those that recruited the trunk-lean term), and to all BUNDLE-profile elements involving a lift. This makes the allowance a consequence of the modelled geometry rather than an analyst's opinion.",
+      "notes": "Because the motion model already charges extra time for long reaches via c_lean, factories should be aware this category is partly a second charge for the same condition; it covers physiological cost, not movement time. Some factories will prefer to set it to 0 and rely on c_lean alone. Document whichever choice is made."
+    },
+    {
+      "code": "FORCE_WEIGHT",
+      "name": "Use of force / weight handled",
+      "description": "Muscular effort in lifting, pulling or pushing. In woven tops this is a bundle-handling matter, not a needle-point matter.",
+      "default_percent": 0.0,
+      "cited_range": [0.0, 17.0],
+      "range_basis": "Published guidance scales this allowance with the weight handled. Two independently published rates agree closely: about 1% per 10 lb and about 2% per 10 kg (10 lb = 4.54 kg, so 1%/10 lb corresponds to about 2.2%/10 kg). The ILO recommended-allowance table tabulates the allowance against weight lifted from 5 to 70 lb.",
+      "sources": ["APPAREL_RESOURCES_ALLOWANCES", "CRONOMETRAS_ILO_GUIDE", "ILO_WORK_STUDY"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["bundle", "handling"], "element_profiles": ["BUNDLE", "MANUAL_HANDLING"]},
+      "editable": true,
+      "parametric_rule": {
+        "formula": "r_FORCE = force_rate_pct_per_kg * mass_kg",
+        "force_rate_pct_per_kg": 0.20,
+        "force_rate_status": "literature-grounded",
+        "force_rate_note": "0.20 %/kg = 2% per 10 kg, the midpoint of the two published rates above. Applied to the mass parameter of the element (mass_kg for bundle elements, mass_g/1000 for part-handling elements). Cap at cited_range[1].",
+        "default_percent_note": "The flat default is 0.0 because the parametric rule supersedes it; a garment part of 100 g earns 0.02%, which correctly rounds away, while a 4 kg bundle earns 0.8%."
+      }
+    },
+    {
+      "code": "CLOSE_ATTENTION",
+      "name": "Close attention / fine work",
+      "description": "Visual and cognitive load of holding a fine tolerance.",
+      "default_percent": 2.0,
+      "cited_range": [0.0, 5.0],
+      "range_basis": "The ILO recommended-allowance table itemises close attention in three increasing steps: fairly fine work, fine or exacting, very fine or very exacting. Published apparel guidance places fine-work variable fatigue at roughly 2-5%.",
+      "sources": ["ILO_WORK_STUDY", "APPAREL_RESOURCES_ALLOWANCES"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["handling", "machine"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION"]},
+      "editable": true,
+      "trigger_rule": "Engine default, keyed to the precision classes already in the element parameters: P0/P1 -> 0%, P2 -> 1%, P3 -> 2%, P4 -> 4%. For HGD (guide_seam) use the seam tolerance: >4 mm -> 0%, 2-4 mm -> 1%, 1-2 mm -> 2%, <1 mm -> 4%. This mapping is a project convention and is calibration-pending; only the fact that published guidance graduates this allowance in three steps is literature-grounded.",
+      "trigger_status": "calibration-pending"
+    },
+    {
+      "code": "MONOTONY",
+      "name": "Monotony and tedium",
+      "description": "Mental monotony of short-cycle repetitive work.",
+      "default_percent": 1.0,
+      "cited_range": [1.0, 4.0],
+      "range_basis": "Published apparel variable-fatigue guidance gives monotonous work in the range 1-4%; the ILO table itemises mental strain and tedium as separate graduated entries.",
+      "sources": ["APPAREL_RESOURCES_ALLOWANCES", "ILO_WORK_STUDY"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true,
+      "notes": "Cycle-length-dependent in practice. A defensible refinement, not yet specified here: scale within the cited range by operation cycle time, shortest cycles taking the top of the range."
+    },
+    {
+      "code": "ENVIRONMENT",
+      "name": "Atmospheric conditions, light and noise",
+      "description": "Heat and humidity, inadequate light, and noise level.",
+      "default_percent": 0.0,
+      "cited_range": [0.0, 10.0],
+      "range_basis": "The ILO recommended-allowance table treats atmospheric conditions as a wide variable entry, and itemises bad light in three steps (slightly below recommended, well below, quite inadequate) and noise in four (continuous, intermittent-loud, intermittent-very loud, high-pitched-loud). Published worked examples for hot and humid conditions use about 5%.",
+      "sources": ["ILO_WORK_STUDY", "AL_RANA_ALLOWANCE_EXAMPLE"],
+      "status": "literature-grounded",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true,
+      "notes": "Default 0 deliberately: this is a site condition and must be a conscious factory decision, ideally supported by measurement (WBGT, lux, dB). Naturally-ventilated plants in hot climates commonly set 4-6%."
+    },
+    {
+      "code": "MACHINE_DELAY",
+      "name": "Machine delay",
+      "description": "Unavoidable machine-attributable interruptions: rethreading, bobbin change, needle change, thread break, minor adjustment.",
+      "default_percent": 5.0,
+      "cited_range": [3.0, 10.0],
+      "range_basis": "No ILO figure exists for this category. Apparel practice adds a machine allowance to the machine-time component of an operation, and published apparel time-study procedure states it is added only to those elements where the machine is running. The published bundled convention of about 20% machine-and-personal allowance is the only widely cited anchor.",
+      "sources": ["ONLINECLOTHINGSTUDY_SAM", "ONLINECLOTHINGSTUDY_TIMESTUDY", "ONLINECLOTHINGSTUDY_MACHINETIME"],
+      "status": "calibration-pending",
+      "status_note": "The 5% default is this project's provisional value. It should be replaced by a measured figure: log bobbin-change, rethread and thread-break events per operator-hour and divide by machine running time. This is one of the easiest allowances for a factory to measure directly and one of the least defensible to leave at a default.",
+      "applies_to": {"components": ["machine"], "element_profiles": ["MACHINE_STATION"]},
+      "restriction": "MUST NOT be applied to the handling component. Published apparel time-study procedure is explicit that machine allowance is added only to elements where the machine is running.",
+      "editable": true
+    },
+    {
+      "code": "BUNDLE_ALLOWANCE",
+      "name": "Bundle handling allowance",
+      "description": "Bundle-cycle overheads not captured as explicit bundle elements: ticket handling variation, part-count checking, waiting for the next bundle at the station.",
+      "default_percent": 10.0,
+      "cited_range": [5.0, 15.0],
+      "range_basis": "Apparel practice adds a bundle allowance of about 10% on basic time when computing SAM/SMV. The range is this project's judgement of the spread of published practice, not a published range.",
+      "sources": ["ONLINECLOTHINGSTUDY_SAM"],
+      "status": "calibration-pending",
+      "status_note": "Provisional. This category double counts with the explicit HBO/HBC/HBM elements of the taxonomy: those model the physical bundle work mechanistically. A factory using the explicit bundle elements should reduce this allowance towards the bottom of the range (or to 0) and record that decision. The engine must warn when both explicit bundle elements and a full 10% bundle allowance are present.",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true
+    },
+    {
+      "code": "CONTINGENCY",
+      "name": "Contingency",
+      "description": "Small, infrequent, legitimate extra work or delay that is uneconomic to measure separately.",
+      "default_percent": 1.0,
+      "cited_range": [0.0, 5.0],
+      "range_basis": "Contingency allowance is a standard work-study category for legitimate and unexpected items of work or delay; the published guidance does not fix a figure, and practice commonly keeps it small.",
+      "sources": ["AL_RANA_ALLOWANCE_EXAMPLE", "ILO_WORK_STUDY"],
+      "status": "calibration-pending",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true,
+      "notes": "Should be justified by work-sampling evidence. An unjustified contingency allowance is where standards quietly become loose."
+    },
+    {
+      "code": "SPECIAL",
+      "name": "Special / policy allowance",
+      "description": "Named, time-bounded policy allowances: learner allowance, restricted-duty allowance, night-shift allowance, old-machine allowance.",
+      "default_percent": 0.0,
+      "cited_range": [0.0, 25.0],
+      "range_basis": "Published apparel IE guidance recognises special allowances for new, temporarily injured or disabled employees, night-shift workers and workers on very old machines, without fixing figures.",
+      "sources": ["APPAREL_RESOURCES_ALLOWANCES"],
+      "status": "calibration-pending",
+      "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]},
+      "editable": true,
+      "notes": "Must carry a reason string and an expiry date in the policy record. Never part of a published style SMV without being disclosed as such."
+    }
+  ],
+
+  "profiles": [
+    {
+      "code": "WOVEN_TOPS_DECOMPOSED",
+      "name": "Woven tops, decomposed (recommended default)",
+      "description": "Every category costed separately. Recommended because it makes each number auditable and separately improvable.",
+      "recommended": true,
+      "values_percent": {
+        "PERSONAL": 5.0,
+        "BASIC_FATIGUE": 4.0,
+        "POSTURE": 1.0,
+        "AWKWARD_POSITION": 2.0,
+        "FORCE_WEIGHT": "parametric",
+        "CLOSE_ATTENTION": "parametric",
+        "MONOTONY": 1.0,
+        "ENVIRONMENT": 0.0,
+        "MACHINE_DELAY": 5.0,
+        "BUNDLE_ALLOWANCE": 10.0,
+        "CONTINGENCY": 1.0
+      },
+      "reconciliation_note": "Non-bundle, non-machine fixed categories sum to 14% (PERSONAL 5 + BASIC_FATIGUE 4 + POSTURE 1 + AWKWARD_POSITION 2 + MONOTONY 1 + ENVIRONMENT 0 + CONTINGENCY 1) plus the parametric attention and force terms (typically 1-2% for woven tops), i.e. about 15-16% on all time; machine delay adds 5% on machine time only; bundle allowance adds 10%. Total effective uplift on a typical operation therefore lands close to the published apparel convention of 10% bundle plus 20% machine-and-personal on basic time. The decomposed profile reproduces conventional practice while making each component visible.",
+      "warning": "If the operation model already contains explicit HBO/HBC/HBM bundle elements, set BUNDLE_ALLOWANCE towards 0-5% to avoid double counting."
+    },
+    {
+      "code": "APPAREL_CONVENTIONAL",
+      "name": "Conventional apparel bundled allowance",
+      "description": "The widely used two-number convention, provided for backward comparison with existing factory standards and for validating the decomposed profile against them.",
+      "recommended": false,
+      "values_percent": {
+        "BUNDLE_ALLOWANCE": 10.0,
+        "MACHINE_AND_PERSONAL": 20.0
+      },
+      "extra_category": {
+        "code": "MACHINE_AND_PERSONAL",
+        "name": "Bundled machine, personal and fatigue allowance",
+        "default_percent": 20.0,
+        "cited_range": [15.0, 25.0],
+        "range_basis": "Published apparel SAM procedure: add bundle allowance of about 10% and machine-and-personal allowance of about 20% to basic time. Practitioner sources reproducing this convention openly state they do not know its original source.",
+        "sources": ["ONLINECLOTHINGSTUDY_SAM", "ONLINECLOTHINGSTUDY_TIMESTUDY"],
+        "status": "calibration-pending",
+        "applies_to": {"components": ["handling", "machine", "bundle"], "element_profiles": ["MANUAL_HANDLING", "MACHINE_STATION", "BUNDLE"]}
+      },
+      "warning": "This profile applies machine allowance to handling time as well, which the same published procedure elsewhere says should not be done. Use it for comparison, not as the production default."
+    },
+    {
+      "code": "ILO_CONSTANT_ONLY",
+      "name": "Constant relaxation allowance only",
+      "description": "The 9% (men) / 11% (women) constant relaxation allowance with nothing else. Useful as a floor when auditing whether a factory's total allowance is defensible.",
+      "recommended": false,
+      "values_percent": {"PERSONAL": 5.0, "BASIC_FATIGUE": 4.0},
+      "variant_female": {"PERSONAL": 7.0, "BASIC_FATIGUE": 4.0}
+    }
+  ],
+
+  "application_rules": [
+    {"id": "AR1", "rule": "ST_e = BT_e * (1 + sum of r_c for categories c applicable to element e's profile and time component). No compounding."},
+    {"id": "AR2", "rule": "MACHINE_DELAY applies only to the machine time component. Where the machine-overlap rule made guidance the binding constraint for a seam segment, that segment's time is component 'handling' and MACHINE_DELAY does not apply to it."},
+    {"id": "AR3", "rule": "BUNDLE-profile element times are amortised over bundle_size BEFORE allowances are applied."},
+    {"id": "AR4", "rule": "Parametric categories (FORCE_WEIGHT, CLOSE_ATTENTION) are evaluated from the element's own parameters using the trigger/parametric rules in this file. The resolved percentage must be recorded in the audit trail, not just the category name."},
+    {"id": "AR5", "rule": "Total allowance per element is capped at max_total_percent. Exceeding the cap is an error, not a warning: it indicates a policy misconfiguration."},
+    {"id": "AR6", "rule": "Every SMV record stores the allowance policy id and version. Editing a policy creates a new version; it never mutates an existing one, because published SMVs must remain reproducible."},
+    {"id": "AR7", "rule": "Changing any default in this file requires a reason string. The UI must not permit silent edits to allowance policy."},
+    {"id": "AR8", "rule": "SPECIAL allowances must carry a reason and an expiry date, and must be reported separately from the engineered standard, never folded into it."}
+  ],
+
+  "validation": {
+    "max_total_percent": 40.0,
+    "warn_total_percent_above": 32.0,
+    "warn_if_both": ["explicit bundle elements present", "BUNDLE_ALLOWANCE >= 10"],
+    "error_if": [
+      "MACHINE_DELAY applied to a handling component",
+      "any category percent negative",
+      "PERSONAL outside [0, 10]",
+      "a category present that is not declared in categories[]",
+      "profile APPAREL_CONVENTIONAL used without an explicit override acknowledgement"
+    ],
+    "self_test": "The decomposed profile applied to a reference operation must land within 5 percentage points of the APPAREL_CONVENTIONAL profile applied to the same operation. If it does not, one of the two is misconfigured. This test is executed by the calibration module and its result stored with the policy version."
+  },
+
+  "sources": {
+    "ILO_WORK_STUDY": "Kanawaty, G. (ed.), Introduction to Work Study, 4th revised edition, International Labour Office, Geneva, 1992. The recommended-allowance guidance (constant allowances for personal needs and basic fatigue; variable allowances for standing, abnormal position, use of force, bad light, atmospheric conditions, close attention, noise level, mental strain, monotony and tedium) originates here and is reproduced in most industrial-engineering textbooks.",
+    "ILO_CAVEAT": "Apparel Resources, 'IE in Apparel Manufacturing-5: Determining Allowances', which records the ILO's position that it has not adopted, and is not likely to adopt, standards relating to the determination of allowances.",
+    "FERREIRA_GARCIA_2019": "Ferreira Garcia et al., 'Determination of Allowance Time by Work Sampling and Heart Rate in a Manufacturing Plant in Juarez, Mexico', Journal of Engineering (Wiley), 2019, doi:10.1155/2019/1316734. States the ILO percentages as 5% or 7% personal needs plus 4% fatigue, totalling 9% and 11% for men and women respectively; reports a case where a measured allowance of 15% replaced a company figure of 6.3%.",
+    "APPAREL_RESOURCES_ALLOWANCES": "Apparel Resources, 'IE in Apparel Manufacturing-5: Determining Allowances'. Gives 5% personal needs as appropriate in shift hours and variable-fatigue ranges including awkward posture about 2% for bending up to about 7% for stretching, monotonous work 1-4%, and about 1% per 10 lb for muscular energy.",
+    "CRONOMETRAS_ILO_GUIDE": "Cronometras, 'Complete Guide to ILO Fatigue Allowances'. Reproduces 5% personal needs, 4% constant basic fatigue, posture steps (standing 2%, stooping 2%, kneeling 3%, crawling 4%) and effort steps including about 2% per 10 kg lifted.",
+    "AL_RANA_ALLOWANCE_EXAMPLE": "Published practitioner worked example summing personal needs 5% + basic fatigue 4% + standing 2% + bending posture 2% + hot and humid 5% = 18% total allowance, and describing contingency allowance as covering legitimate and unexpected items of work or delay.",
+    "ONLINECLOTHINGSTUDY_SAM": "Online Clothing Study, 'How to Calculate Garment SAM (Standard Allowed Minute)'. Gives the apparel convention SAM = basic minute + bundle allowance (10%) + machine and personal allowance (20%).",
+    "ONLINECLOTHINGSTUDY_TIMESTUDY": "Online Clothing Study, 'How to do Time Study for Garment Operations'. States that machine allowance is added only to those elements where the machine is running, and fatigue and personal allowances to all elements (about 20%); the author explicitly notes the source of these percentages is unknown to him.",
+    "ONLINECLOTHINGSTUDY_MACHINETIME": "Online Clothing Study, 'Secret Behind Calculation of Machine Time in SAM'. Describes machine time as SPI x seam length / RPM with additional components for stopping accuracy, handling difficulty and a machine allowance percentage."
+  },
+
+  "open_issues": [
+    "MACHINE_DELAY default of 5% is provisional and should be the first allowance a factory measures.",
+    "BUNDLE_ALLOWANCE overlaps the explicit bundle elements of the taxonomy; the policy needs a factory decision on which mechanism carries bundle cost.",
+    "The CLOSE_ATTENTION precision-class mapping is a project convention; only its three-step graduation is literature-grounded.",
+    "POSTURE for seated sewing (1%) is interpolated between published entries and is not itself published.",
+    "No published allowance guidance exists specifically for elastane-blend or sheer slippery fabrics; the motion model handles their handling difficulty in basic time, and no additional allowance should be added for fabric type without evidence."
+  ]
+}

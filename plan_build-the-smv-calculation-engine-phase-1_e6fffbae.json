@@ -1,0 +1,66 @@
+{
+  "version": 3,
+  "created_at": "2026-08-25T18:02:02.905Z",
+  "task_summary": "Build the SMV calculation engine (Phase 1: Engine core + Calibration)",
+  "agents": [],
+  "phases": [
+    {
+      "name": "Plan",
+      "delegations": [
+        {
+          "steps": [
+            {
+              "title": "Implement handling-time module (Fitts-based)",
+              "description": "Write handling_time.py implementing the Fitts'-law movement-time model plus additive terms for grasp complexity, alignment/positioning, ply count, and fabric bulk, using the element taxonomy and global parameters from element_taxonomy.json (23 elements, 30 global parameters, 5 engine constants). Each element function must return a structured dict with inputs, intermediate terms, and the time contribution so results are fully auditable. Save handling_time.py."
+            },
+            {
+              "title": "Implement machine-time module wrapping effective_spm.py",
+              "description": "Write machine_time.py that wraps the existing effective_spm.py (from Phase 0) into a consistent engine-facing interface: given a seam_geometry.json operation record and a machine_classes.csv row, compute machine time with the same auditable-dict pattern as handling_time.py. Save machine_time.py."
+            },
+            {
+              "title": "Implement SMV assembly with audit trail and allowance application",
+              "description": "Write smv_assembly.py that composes an operation's SMV from its handling elements + machine time, applies allowance_policy.json categories at the element level, and emits a structured breakdown (every element, its parameters, its minute contribution, and allowance applied). Add explicit unit-conversion guards (TMU/second/minute) that raise on ambiguous units. Save smv_assembly.py."
+            },
+            {
+              "title": "Write and run the engine test suite",
+              "description": "Build a pytest suite (test_engine.py) with: (a) physics unit tests reproducing hand-calculated times for known seam length/SPI/SPM combinations, (b) property tests for monotonicity (e.g. longer seam → more time, faster machine → less time) and dimensional consistency, (c) regression tests pinning current engine outputs for the seam_geometry.json shirt operations. Run the suite, fix any failures, and save the passing test file plus a text summary of results."
+            },
+            {
+              "title": "Run and validate a worked example end-to-end",
+              "description": "Compute the full SMV for one representative shirt operation (armhole seam, size M) end-to-end through handling_time.py + machine_time.py + smv_assembly.py, showing the complete audit trail (every element, every allowance). Render this breakdown as a clear table figure (smv_breakdown_example.png) using the figure-style skill. Cross-check the total against the Phase-0 benchmark crosscheck for plausibility."
+            },
+            {
+              "title": "Design time-study ingestion schema",
+              "description": "Define time_study_schema.json: the schema for factory time-study input records (operation, operator, observed cycle times, performance rating, machine, fabric, ply count, seam length), supporting both cycle-level and element-level observations. Write a loader/validator function (time_study_io.py) that parses a CSV/JSON time-study file against this schema and flags malformed rows."
+            },
+            {
+              "title": "Implement hierarchical coefficient-fitting calibration module",
+              "description": "Write calibration_fit.py: given a set of time-study observations, fit engine coefficients (e.g. guidance-speed caps, ramp efficiency, handling-element rate parameters) by regression, with a hierarchical structure so fabric-class and machine-class each get their own multiplier while sharing global motion parameters. Handle sparse/unbalanced data (partial pooling or shrinkage toward global defaults). Generate a synthetic time-study dataset (clearly labeled SYNTHETIC, derived by perturbing the engine's own outputs with noise) to demonstrate and test the fitting code, since no real factory data exists yet."
+            },
+            {
+              "title": "Build calibration diagnostics and coverage report",
+              "description": "Write calibration_diagnostics.py producing residual plots (observed vs. predicted cycle time), a per-operation error table, cross-validated accuracy metrics (e.g. MAPE), and a coverage report listing which operation/fabric/machine combinations lack supporting observations. Render the diagnostics as a multi-panel figure (calibration_diagnostics.png) using the fitted synthetic dataset from the previous step. Save the figure and the underlying CSV tables."
+            },
+            {
+              "title": "Write Phase 1 completion report",
+              "description": "Write engine_phase1_report.md summarizing the engine core and calibration module, test suite results, the worked-example audit trail, the calibration module's design rationale (why hierarchical, how it handles sparse data), and an explicit statement of how many real time studies are recommended before absolute SMVs approach GSD-grade accuracy (per the original project's own feasibility estimate of ~30-50 studies). Include an IP-provenance note confirming no licensed predetermined-time data was used in engine logic or defaults."
+            }
+          ]
+        }
+      ],
+      "id": "phase-0"
+    }
+  ],
+  "desired_outputs": [
+    "smv_engine/ Python package: handling_time.py, machine_time.py (wraps effective_spm.py), smv_assembly.py with full audit trail",
+    "test suite (pytest) covering physics unit tests, monotonicity/dimensional property tests, and regression tests pinning current outputs",
+    "calibration/ module: time-study ingestion schema (time_study_schema.json + loader), hierarchical coefficient-fitting regression (calibration_fit.py), diagnostics report generator",
+    "Worked example: full SMV breakdown for one shirt operation (e.g. armhole seam) computed end-to-end with audit trail, rendered as a table/figure",
+    "Calibration diagnostics demo using a synthetic time-study dataset (since no real factory data exists yet), producing residual plots and a coverage report",
+    "engine_phase1_report.md summarizing what was built, test results, calibration module design decisions, and what real time-study data is needed next"
+  ],
+  "feasibility": {
+    "confidence": "high",
+    "rationale": "All required inputs (motion model, element taxonomy, allowance policy, effective_spm.py, machine_classes.csv, seam_geometry.json) are already built and validated from Phase 0. The engine core is a straightforward composition of existing physics; the calibration module's accuracy is inherently limited until real factory time-study data arrives, but the module itself (schema, regression, diagnostics) can be fully built and tested against synthetic/benchmark data now."
+  }
+}

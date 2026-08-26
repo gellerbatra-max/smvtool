@@ -1,0 +1,830 @@
+{
+  "spec": {
+    "name": "Woven-Tops Handling Element Taxonomy",
+    "id": "wt-handling-taxonomy",
+    "version": "0.1.0",
+    "status": "draft-for-implementation",
+    "scope": "Manual handling elements sufficient to describe single-needle and overlock sewing of woven shirts and blouses. Machine (needle-running) time is NOT defined here; it is supplied by the machine-time pillar and combined by the assembly rules below.",
+    "ip_provenance": "All element codes, names, granularity and parameter signatures are original to this project. No licensed predetermined-motion-time code set (GSD, MTM-1/2/UAS, MOST, MODAPTS) was transcribed, paraphrased or used as a naming template, and no tabulated TMU values from any such system appear in this file. Every time value in this file is either (a) a coefficient of a continuous parametric function derived from open peer-reviewed motor-control literature, or (b) an explicitly flagged calibration-pending provisional value to be replaced by factory time-study fitting.",
+    "companion_documents": [
+      "motion_model.md (mathematical specification and citations)",
+      "allowance_policy.json (allowance categories and application rules)"
+    ]
+  },
+
+  "conventions": {
+    "internal_time_unit": "s",
+    "internal_length_unit": "mm",
+    "signature_length_unit": "cm (converted to mm on entry: mm = 10 * cm)",
+    "signature_tolerance_unit": "mm",
+    "angle_unit": "degree",
+    "mass_unit": "g",
+    "output_units": ["s", "min", "TMU"],
+    "tmu_definition": {
+      "TMU_in_min": 0.0006,
+      "TMU_in_s": 0.036,
+      "TMU_per_s": 27.777777777777779,
+      "TMU_per_min": 1666.6666666666667,
+      "warning": "Secondary web sources stating 33.33 TMU/s are wrong and must never be used."
+    },
+    "performance_basis": "All element times returned by this taxonomy are BASIC TIME at 100% standard performance (i.e. rating already applied). Allowances are applied afterwards per allowance_policy.json. Observed (rated) study times must be multiplied by rating/100 before they are used to fit coefficients.",
+    "rounding": "No rounding inside the engine. Round only for display: seconds to 3 decimals, minutes to 4 decimals, TMU to 1 decimal."
+  },
+
+  "expression_grammar": {
+    "purpose": "Each element declares a phase_program: an ordered list of motion phases whose numeric arguments are given as restricted expressions. The engine evaluates these expressions to obtain phase times, then combines them per the element's combination rule. This keeps every element COMPUTED, never looked up.",
+    "allowed_identifiers": [
+      "any parameter name declared in the element's own parameters[] list",
+      "any symbol in global_parameters[].symbol",
+      "the reserved names PHASE_SCALE, FABRIC, PLIES"
+    ],
+    "allowed_functions": {
+      "W(pc)": "returns tolerance width in mm for precision_class code pc, from class_tables.precision_class",
+      "LIMB(d_mm)": "returns the limb_class code whose distance band contains d_mm",
+      "A_L(d_mm)": "intercept a (s) of the limb class selected for d_mm",
+      "B_L(d_mm)": "slope b (s/bit) of the limb class selected for d_mm",
+      "ID_POINT(d_mm, w_mm)": "log2(d_mm / w_mm + 1)   [Shannon formulation, MacKenzie 1989]",
+      "ID_STEER(l_mm, w_mm, r_mm)": "(l_mm / w_mm) * (1 + k_R * (R_ref_mm / r_mm)^(1/3))   [Accot-Zhai 1997 with Nancel-Lank curvature augmentation; r_mm = Inf for straight paths]",
+      "PHI(phase, fabric_class)": "fabric difficulty multiplier for the named phase; see fabric_difficulty_model",
+      "LAM_M(mass_g)": "mass multiplier 1 + kappa_m * log2(1 + mass_g / m_ref_g)",
+      "PLY(n)": "ply-handling adder g_ply * max(n - 1, 0)^gamma_ply, in s",
+      "MIN(a,b)": "minimum",
+      "MAX(a,b)": "maximum",
+      "CLAMP(x, lo, hi)": "bound x to [lo, hi]",
+      "LOG2(x)": "base-2 logarithm",
+      "IN(x, [..])": "1.0 if x is in the list, else 0.0"
+    },
+    "operators": ["+", "-", "*", "/", "^", "parentheses"],
+    "forbidden": "No lookup of a stored time constant keyed by a distance class, motion class, or code combination. Any future extension must remain a continuous function of its declared parameters."
+  },
+
+  "phase_primitives": [
+    {
+      "type": "point",
+      "name": "Discrete aimed movement (transport / position / correct)",
+      "equation": "t = ( A_L(D) + B_L(D) * ID_POINT(D, W) ) * LAM_M(mass_g) * PHI('point', fabric_class) + lean_term",
+      "lean_term": "c_lean if D > D_trunk_mm else 0",
+      "arguments": ["D (mm)", "W (mm)", "mass_g", "fabric_class", "n_sub (repeat count, default 1)"],
+      "notes": "Repeated n_sub times when the element requires n_sub successive aimed corrections (e.g. matching two edges = 2 positioning acts). Basis: Fitts 1954; Shannon form MacKenzie 1989; limb-dependent slope Langolf/Chaffin/Foulke 1976, upper-bounded by Balakrishnan & MacKenzie 1997."
+    },
+    {
+      "type": "steer",
+      "name": "Continuous constrained guidance along a path (edge guiding, folder feeding, running match)",
+      "equation": "t = ( a_steer + b_steer * ID_STEER(L, W, R) ) * PHI('steer', fabric_class)",
+      "arguments": ["L (mm path length)", "W (mm lateral tolerance)", "R (mm radius of curvature, Inf if straight)", "fabric_class"],
+      "notes": "Basis: Accot & Zhai 1997 steering law; curvature term after Nancel & Lank. Steady-state guidance speed implied by the law is v_guide = W / b_steer, which is the physical hook the machine-time pillar uses to derive achieved SPM (see assembly_rules.machine_overlap)."
+    },
+    {
+      "type": "grasp",
+      "name": "Acquire and secure control of plies",
+      "equation": "t = ( g_0 + PLY(plies) + extra_s ) * PHI('grasp', fabric_class)",
+      "arguments": ["plies", "fabric_class", "extra_s (element-specific additive, s)"],
+      "notes": "extra_s carries element-specific acquisition difficulty (e.g. separating a ply from a clamped bundle). Ply term is a continuous power law, not a class table."
+    },
+    {
+      "type": "fixed",
+      "name": "Bounded process act with no reach component (snip, knot, discrete control actuation)",
+      "equation": "t = base_s * n_actions * PHI('fixed', fabric_class)",
+      "arguments": ["base_s", "n_actions", "fabric_class"],
+      "notes": "base_s always comes from a class table of PHYSICAL acts (tool_class, tie_type), each flagged calibration-pending. These are process constants of the workstation, not motion-time data."
+    },
+    {
+      "type": "cognitive",
+      "name": "Visual fixation / verification / decision",
+      "equation": "t = t_look * k_class * n_checks",
+      "arguments": ["k_class (from inspect_class table)", "n_checks"],
+      "notes": "Deliberately coarse. Visual-search time is not modelled by Fitts' law; t_look is a single calibration-pending global."
+    }
+  ],
+
+  "fabric_difficulty_model": {
+    "descriptor_normalisation": {
+      "z_limp": "MAX(0, LOG2(B_ref / B))   where B = FAST/KES bending rigidity (uN*m). Limper than reference -> positive. RECTIFIED at 0: a fabric crisper than the reference earns no time credit.",
+      "z_slip": "MAX(0, LOG2(MIU_ref / MIU))   where MIU = KES-F surface coefficient of friction. More slippery than reference -> positive. RECTIFIED at 0: a grippier fabric earns no time credit.",
+      "z_bulk": "MAX(0, LOG2(t / t_ref))   where t = single-ply thickness (mm). Bulkier than reference -> positive. RECTIFIED at 0: a thinner fabric earns no time credit from thickness alone (its limpness is already charged via z_limp).",
+      "rectification_rationale": "All three descriptors are one-sided penalties, not two-sided scores. Unrectified, the credits from being crisper or grippier than the reference could cancel a genuine bulk penalty: brushed flannel (stiffer AND grippier AND bulkier than poplin) computed as FASTER than poplin in the specification smoke test, which is physically wrong. Rectification also makes PHI monotone non-decreasing in every difficulty descriptor, which is the behaviour an industrial engineer will expect and audit against. Consequence: the reference fabric is the EASIEST-handling point in the model, so it must be chosen as a genuinely easy, well-behaved cloth (crisp cotton shirting poplin), not as an average of the factory's range. With rectification, Phi_min is no longer reachable from the descriptors and exists only as a guard rail."
+    },
+    "multiplier": "PHI(phase, f) = CLAMP( 1 + PHASE_SCALE[phase] * ( phi_limp*z_limp(f) + phi_slip*z_slip(f) + phi_bulk*z_bulk(f) ), Phi_min, Phi_max )",
+    "phase_scale_defaults": {"grasp": 1.0, "point": 0.7, "steer": 0.5, "fixed": 0.3, "cognitive": 0.0},
+    "rationale": "One fabric-sensitivity vector (phi_limp, phi_slip, phi_bulk) plus four phase-scale scalars, rather than a per-element fabric table. Keeps the number of calibrated parameters small and identifiable. Reference fabric (all z = 0, PHI = 1) is crisp cotton shirting poplin.",
+    "literature_anchor": "Low bending and shear rigidity are the fabric properties that published fabric-objective-measurement work associates with difficulty in making-up (distortion in cutting, seam pucker, poor control); KES-F and FAST are the standard instruments for measuring them. The DIRECTION of each effect is literature-supported; the MAGNITUDES (phi_*) are calibration-pending."
+  },
+
+  "global_parameters": [
+    {"symbol": "a_fin", "name": "finger intercept", "meaning": "Fitts intercept for finger-scale aimed movement", "units": "s", "default": 0.06, "plausible_range": [0.0, 0.15], "status": "calibration-pending", "source": "Fitts-law intercepts in aimed-movement studies span roughly -0.08 to +0.24 s; constrain to >= 0 in the fit."},
+    {"symbol": "b_fin", "name": "finger slope", "meaning": "movement time per bit of index of difficulty, finger", "units": "s/bit", "default": 0.055, "plausible_range": [0.026, 0.100], "status": "literature-grounded", "source": "Langolf, Chaffin & Foulke 1976 report 38 bit/s for finger motion (b = 0.026 s/bit); Balakrishnan & MacKenzie 1997 obtained substantially lower bandwidths. Default is the geometric midpoint of that disputed span."},
+    {"symbol": "a_wri", "name": "wrist intercept", "meaning": "Fitts intercept for wrist-scale aimed movement", "units": "s", "default": 0.08, "plausible_range": [0.0, 0.20], "status": "calibration-pending", "source": "as a_fin"},
+    {"symbol": "b_wri", "name": "wrist slope", "meaning": "movement time per bit, wrist", "units": "s/bit", "default": 0.080, "plausible_range": [0.043, 0.150], "status": "literature-grounded", "source": "Langolf et al. 1976 report 23 bit/s for wrist motion (b = 0.043 s/bit); upper bound from later limb-segment studies."},
+    {"symbol": "a_arm", "name": "arm intercept", "meaning": "Fitts intercept for whole-arm aimed movement", "units": "s", "default": 0.10, "plausible_range": [0.0, 0.25], "status": "literature-grounded", "source": "MacKenzie et al. (CHI 2008 error-model study) report a = 94 ms averaged over participants; mouse point-click intercepts of 200-240 ms are reported by MacKenzie & Buxton 1994."},
+    {"symbol": "b_arm", "name": "arm slope", "meaning": "movement time per bit, whole arm", "units": "s/bit", "default": 0.150, "plausible_range": [0.100, 0.225], "status": "literature-grounded", "source": "Langolf et al. 1976 give 10 bit/s for arm motion (b = 0.100 s/bit, lower bound). Reported slopes for practised aimed movement cluster at 0.167-0.225 s/bit (MacKenzie & Buxton 1994; MacKenzie 2008). Default 0.150 s/bit = 6.7 bit/s throughput for a practised operator."},
+    {"symbol": "D_trunk_mm", "name": "trunk-involvement threshold", "meaning": "reach distance beyond which the operator must lean, adding a torso term", "units": "mm", "default": 600, "plausible_range": [500, 750], "status": "calibration-pending", "source": "Workstation anthropometry; set to the operator's comfortable seated reach envelope."},
+    {"symbol": "c_lean", "name": "trunk lean adder", "meaning": "additive time for torso involvement on reaches beyond D_trunk_mm", "units": "s", "default": 0.30, "plausible_range": [0.15, 0.60], "status": "calibration-pending", "source": "Provisional. Fitts' law is fitted for limb movement and does not cover trunk recruitment."},
+    {"symbol": "g_0", "name": "base grasp time", "meaning": "time to close the hand on and secure control of a single ply of reference fabric", "units": "s", "default": 0.20, "plausible_range": [0.10, 0.40], "status": "calibration-pending", "source": "Provisional. Grasp is a distinct phase from transport and is not covered by Fitts' law."},
+    {"symbol": "g_ply", "name": "per-extra-ply grasp adder", "meaning": "additional grasp/separation time per ply beyond the first", "units": "s", "default": 0.12, "plausible_range": [0.05, 0.30], "status": "calibration-pending", "source": "Provisional."},
+    {"symbol": "gamma_ply", "name": "ply exponent", "meaning": "exponent on (plies - 1); >1 means ply difficulty accelerates", "units": "dimensionless", "default": 1.0, "plausible_range": [0.7, 1.4], "status": "calibration-pending", "source": "Provisional. Fit only if the factory's studies contain 3+ distinct ply counts, otherwise hold at 1.0."},
+    {"symbol": "g_bundle", "name": "bundle-extraction adder", "meaning": "extra acquisition time when the ply must be separated from a clamped or tied bundle", "units": "s", "default": 0.15, "plausible_range": [0.05, 0.40], "status": "calibration-pending", "source": "Provisional."},
+    {"symbol": "kappa_m", "name": "mass sensitivity", "meaning": "coefficient of the logarithmic mass penalty on aimed movement", "units": "dimensionless", "default": 0.05, "plausible_range": [0.0, 0.15], "status": "literature-grounded", "source": "Object weight increases movement time in a logarithmic pattern (Hagadorn 2004, RIT); object weight is a statistically significant predictor absent from MOST (Springer IJAMT 2025 MOST-vs-Fitts study). Magnitude for sub-kilogram garment parts is calibration-pending."},
+    {"symbol": "m_ref_g", "name": "mass reference", "meaning": "reference part mass in the mass multiplier", "units": "g", "default": 100.0, "plausible_range": [50.0, 250.0], "status": "calibration-pending", "source": "Convention: roughly one shirt front panel in light shirting."},
+    {"symbol": "a_steer", "name": "steering intercept", "meaning": "intercept of the steering law for guided fabric feeding", "units": "s", "default": 0.15, "plausible_range": [0.0, 0.40], "status": "calibration-pending", "source": "Accot & Zhai 1997 give the functional form; coefficients are device- and task-specific and must be fitted."},
+    {"symbol": "b_steer", "name": "steering slope", "meaning": "time per unit of steering index (L/W); equivalently guidance speed limit v_guide = W / b_steer", "units": "s", "default": 0.0133, "plausible_range": [0.0080, 0.0250], "status": "calibration-pending", "source": "Set so that a 2 mm guidance tolerance yields v_guide = 150 mm/s (about 9.8 yd/min), consistent with the observation that a 5000 SPM head at 14 SPI covers 9.9 yd/min: at fine stitch densities the machine and the operator's guidance capability are comparable, and at coarse densities guidance becomes the binding constraint. Must be refitted from observed feed speeds."},
+    {"symbol": "k_R", "name": "curvature penalty", "meaning": "weight of the curvature term in the steering index", "units": "dimensionless", "default": 0.50, "plausible_range": [0.0, 1.5], "status": "literature-grounded", "source": "Curvature-augmented steering law of Nancel & Lank (MT proportional to integral of ds/(W*R^(1/3))); Accot & Zhai 1999 found circular paths significantly harder than straight paths of equal length and width. Magnitude calibration-pending."},
+    {"symbol": "R_ref_mm", "name": "curvature reference radius", "meaning": "radius at which the curvature term equals k_R", "units": "mm", "default": 50.0, "plausible_range": [25.0, 100.0], "status": "calibration-pending", "source": "Convention: armhole/neckline-scale curvature in a woven top."},
+    {"symbol": "k_theta", "name": "pivot angle coefficient", "meaning": "additive reorientation time per 90 degrees of corner turn", "units": "s per 90 deg", "default": 0.25, "plausible_range": [0.10, 0.60], "status": "literature-grounded", "source": "Pastel (2006) modelled a corner as coupled steering-plus-pointing and found corner angle a significant determinant of movement time. Magnitude calibration-pending."},
+    {"symbol": "epsilon_bi", "name": "bimanual coupling penalty", "meaning": "fractional penalty added to the slower hand when two hands perform asymmetric simultaneous acts", "units": "dimensionless", "default": 0.05, "plausible_range": [0.0, 0.20], "status": "literature-grounded", "source": "Kelso, Southard & Goodman 1979 (Science 204:1029; JEP:HPP 5:229) showed two-handed movements to targets of disparate difficulty are performed simultaneously, the easy hand slowing to accommodate the difficult one. Later work (Shea et al. 2011) replicated the pattern while showing departures from strict synchrony, motivating a small penalty rather than exact max()."},
+    {"symbol": "t_look", "name": "visual fixation unit", "meaning": "time for one verification fixation on the work", "units": "s", "default": 0.20, "plausible_range": [0.10, 0.50], "status": "calibration-pending", "source": "Provisional. Visual search is outside the scope of Fitts' law."},
+    {"symbol": "phi_limp", "name": "limpness sensitivity", "meaning": "handling-time sensitivity per unit z_limp", "units": "dimensionless", "default": 0.12, "plausible_range": [0.0, 0.35], "status": "calibration-pending", "source": "Direction literature-supported (low bending rigidity is associated with difficulty in making-up); magnitude must be fitted."},
+    {"symbol": "phi_slip", "name": "slipperiness sensitivity", "meaning": "handling-time sensitivity per unit z_slip", "units": "dimensionless", "default": 0.15, "plausible_range": [0.0, 0.40], "status": "calibration-pending", "source": "Direction supported by object-handling work in which slippery surfaces required significantly more time than high-friction surfaces (Paulun et al. 2016, as reviewed in Elsevier 2026); magnitude must be fitted."},
+    {"symbol": "phi_bulk", "name": "bulk sensitivity", "meaning": "handling-time sensitivity per unit z_bulk", "units": "dimensionless", "default": 0.10, "plausible_range": [0.0, 0.30], "status": "calibration-pending", "source": "Provisional."},
+    {"symbol": "Phi_min", "name": "fabric multiplier floor", "meaning": "lower clamp on PHI", "units": "dimensionless", "default": 0.80, "plausible_range": [0.70, 1.00], "status": "calibration-pending", "source": "Guard rail: prevents stiff/heavy fabrics from being extrapolated into implausibly fast handling."},
+    {"symbol": "Phi_max", "name": "fabric multiplier ceiling", "meaning": "upper clamp on PHI", "units": "dimensionless", "default": 2.50, "plausible_range": [1.50, 4.00], "status": "calibration-pending", "source": "Guard rail for extreme sheer/slippery fabrics outside the calibration envelope."},
+    {"symbol": "B_ref", "name": "bending-rigidity reference", "meaning": "bending rigidity of the reference fabric", "units": "uN*m", "default": 10.0, "plausible_range": [5.0, 15.0], "status": "calibration-pending", "source": "Nominal cotton shirting poplin; replace with the factory's measured reference lot."},
+    {"symbol": "MIU_ref", "name": "friction reference", "meaning": "KES-F surface friction coefficient of the reference fabric", "units": "dimensionless", "default": 0.15, "plausible_range": [0.10, 0.22], "status": "calibration-pending", "source": "Nominal cotton shirting poplin."},
+    {"symbol": "t_ref_mm", "name": "thickness reference", "meaning": "single-ply thickness of the reference fabric", "units": "mm", "default": 0.30, "plausible_range": [0.20, 0.45], "status": "calibration-pending", "source": "Nominal cotton shirting poplin."},
+    {"symbol": "Gamma_skill", "name": "operator-group multiplier", "meaning": "optional multiplicative factor on all handling time for an operator cohort or line", "units": "dimensionless", "default": 1.00, "plausible_range": [0.85, 1.30], "status": "calibration-pending", "source": "Held at 1.0 for the standard-performance definition; fitted only when the factory maintains cohort-specific standards."}
+  ],
+
+  "class_tables": {
+    "precision_class": {
+      "definition": "Geometric tolerance the operator must achieve, i.e. the effective target width W in the index of difficulty. These are engineering tolerances, defined by this project from garment-tolerance practice, NOT time values.",
+      "editable": true,
+      "values": [
+        {"code": "P0", "name": "toss / no tolerance", "W_mm": 60.0, "example": "drop finished piece into a box"},
+        {"code": "P1", "name": "coarse placement", "W_mm": 20.0, "example": "lay a panel on the table roughly in position"},
+        {"code": "P2", "name": "standard seam alignment", "W_mm": 6.0, "example": "match two cut edges for a 10 mm seam allowance"},
+        {"code": "P3", "name": "fine alignment", "W_mm": 2.0, "example": "align a notch, set a topstitch margin, enter an edge guide"},
+        {"code": "P4", "name": "very fine alignment", "W_mm": 1.0, "example": "match a stripe or check across a seam, align a placket edge to a stitch line"}
+      ]
+    },
+    "limb_class": {
+      "definition": "Distance bands selecting which limb-segment Fitts coefficients apply. Bands follow the amplitude ranges used in the limb-segment literature (0.25-30.5 cm).",
+      "editable": true,
+      "values": [
+        {"code": "FINGER", "d_mm_max": 25.0, "a_symbol": "a_fin", "b_symbol": "b_fin"},
+        {"code": "WRIST", "d_mm_max": 120.0, "a_symbol": "a_wri", "b_symbol": "b_wri"},
+        {"code": "ARM", "d_mm_max": null, "a_symbol": "a_arm", "b_symbol": "b_arm"}
+      ]
+    },
+    "fabric_class": {
+      "definition": "Fabric handling classes for woven tops. Each carries MEASURABLE descriptors (bending rigidity, surface friction, thickness) from which the engine computes z_limp, z_slip, z_bulk. Descriptor values below are nominal defaults for typical shirting qualities and should be replaced by the factory's own FAST/KES measurements or by its own descriptor estimates.",
+      "editable": true,
+      "descriptor_status": "calibration-pending (nominal literature-typical values, not measurements of the factory's lots)",
+      "values": [
+        {"code": "REF_POPLIN", "name": "cotton shirting poplin (reference)", "B_uNm": 10.0, "MIU": 0.15, "t_mm": 0.30},
+        {"code": "LAWN_VOILE", "name": "light cotton lawn / voile", "B_uNm": 3.5, "MIU": 0.16, "t_mm": 0.16},
+        {"code": "SHEER_SLIP", "name": "sheer polyester georgette / CDC blouse cloth", "B_uNm": 2.0, "MIU": 0.10, "t_mm": 0.12},
+        {"code": "SATIN_SLIP", "name": "polyester or silk satin blouse cloth", "B_uNm": 5.0, "MIU": 0.10, "t_mm": 0.22},
+        {"code": "TWILL_MED", "name": "medium cotton twill / oxford", "B_uNm": 20.0, "MIU": 0.17, "t_mm": 0.55},
+        {"code": "LINEN_DRY", "name": "linen / linen blend, dry crisp hand", "B_uNm": 16.0, "MIU": 0.19, "t_mm": 0.45},
+        {"code": "FLANNEL_BULK", "name": "brushed cotton flannel", "B_uNm": 25.0, "MIU": 0.20, "t_mm": 0.90},
+        {"code": "STRETCH_WOVEN", "name": "elastane-blend stretch shirting", "B_uNm": 8.0, "MIU": 0.16, "t_mm": 0.35},
+        {"code": "FUSED_PANEL", "name": "fused collar / cuff / placket component", "B_uNm": 60.0, "MIU": 0.15, "t_mm": 0.80}
+      ]
+    },
+    "tool_class": {
+      "definition": "Physical hand tools at the sewing station. base_s is the time to acquire and orient the tool once it is within reach (transport to it is modelled separately as a point phase); action_s is the time of one discrete act with the tool.",
+      "editable": true,
+      "status": "calibration-pending (all values provisional)",
+      "values": [
+        {"code": "SCISSORS", "name": "trimming scissors", "base_s": 0.35, "action_s": 0.15},
+        {"code": "NIPPER", "name": "thread nipper", "base_s": 0.25, "action_s": 0.10},
+        {"code": "AWL", "name": "awl / stiletto", "base_s": 0.30, "action_s": 0.20},
+        {"code": "TWEEZER", "name": "tweezers", "base_s": 0.40, "action_s": 0.25},
+        {"code": "MARKER", "name": "chalk / marking pen / template", "base_s": 0.30, "action_s": 0.35},
+        {"code": "NONE_AUTO", "name": "machine auto-trimmer or thread cutter (no hand tool)", "base_s": 0.0, "action_s": 0.05}
+      ]
+    },
+    "tie_type": {
+      "definition": "Bundle fastening types. base_s is per tie handled.",
+      "editable": true,
+      "status": "calibration-pending (all values provisional)",
+      "values": [
+        {"code": "CLOTH_KNOT", "name": "cloth strip, single knot", "open_s": 1.20, "close_s": 1.60},
+        {"code": "ELASTIC", "name": "elastic band", "open_s": 0.60, "close_s": 0.90},
+        {"code": "CLAMP", "name": "spring clamp or clip", "open_s": 0.45, "close_s": 0.55},
+        {"code": "NONE", "name": "loose stack, no tie", "open_s": 0.0, "close_s": 0.0}
+      ]
+    },
+    "inspect_class": {
+      "definition": "Multiplier k_class on the visual fixation unit t_look.",
+      "editable": true,
+      "status": "calibration-pending",
+      "values": [
+        {"code": "GLANCE", "name": "confirm orientation / face side", "k_class": 1.0},
+        {"code": "CHECK_SEAM", "name": "check seam width, catch, or pucker", "k_class": 1.6},
+        {"code": "MEASURE", "name": "check against a gauge or template", "k_class": 3.0}
+      ]
+    },
+    "control_class": {
+      "definition": "Discrete machine-control actuations performed by the operator with a hand or knee. Reach to the control is modelled as a point phase; base_s is the actuation itself.",
+      "editable": true,
+      "status": "calibration-pending",
+      "values": [
+        {"code": "KNEE_LIFT", "name": "knee-operated presser-foot lift", "base_s": 0.15},
+        {"code": "BACKTACK", "name": "backtack lever / button", "base_s": 0.20},
+        {"code": "HAND_WHEEL", "name": "hand wheel to set needle position", "base_s": 0.35},
+        {"code": "FOOT_LIFT", "name": "foot-operated presser-foot lift", "base_s": 0.20}
+      ]
+    },
+    "bundle_state": {
+      "definition": "Condition of the source stack, controlling whether the bundle-extraction adder applies.",
+      "editable": true,
+      "values": [
+        {"code": "LOOSE", "name": "loose stack, plies free", "applies_g_bundle": false},
+        {"code": "TIED", "name": "tied or clamped bundle", "applies_g_bundle": true},
+        {"code": "CUT_EDGE_STUCK", "name": "fused/stuck cut edges requiring separation", "applies_g_bundle": true}
+      ]
+    }
+  },
+
+  "elements": [
+    {
+      "code": "HAG",
+      "name": "acquire_part",
+      "intent": "Reach to a part or stack, grasp it, and bring it to the work point. One part, no matching.",
+      "signature": "acquire_part(distance_cm, precision_class, fabric_class, plies=1, mass_g=60, bundle_state='LOOSE')",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 25.0, "domain": [1.0, 120.0], "required": true},
+        {"name": "precision_class", "type": "enum:precision_class", "default": "P1", "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 1, "domain": [1, 8], "required": false},
+        {"name": "mass_g", "type": "number", "units": "g", "default": 60.0, "domain": [1.0, 3000.0], "required": false},
+        {"name": "bundle_state", "type": "enum:bundle_state", "default": "LOOSE", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W(precision_class)", "mass_g": "1.0", "n_sub": 1, "role": "reach_empty_hand"},
+        {"type": "grasp", "plies": "plies", "extra_s": "g_bundle * IN(bundle_state, ['TIED','CUT_EDGE_STUCK'])", "role": "acquire"},
+        {"type": "point", "D": "10*distance_cm", "W": "W(precision_class)", "mass_g": "mass_g", "n_sub": 1, "role": "return_loaded"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "The out-and-back structure is explicit so that asymmetric reach distances can be modelled by two calls if needed."
+    },
+    {
+      "code": "HAM",
+      "name": "acquire_and_match",
+      "intent": "Acquire two (or more) parts, bring them together and register their edges or notches to one another before presenting to the machine.",
+      "signature": "acquire_and_match(distance_cm, plies, match_precision, fabric_class, n_match_points=2, mass_g=90, bundle_state='LOOSE', hands='two')",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 25.0, "domain": [1.0, 120.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [2, 8], "required": true},
+        {"name": "match_precision", "type": "enum:precision_class", "default": "P2", "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "n_match_points", "type": "integer", "units": "count", "default": 2, "domain": [1, 6], "required": false},
+        {"name": "mass_g", "type": "number", "units": "g", "default": 90.0, "domain": [1.0, 3000.0], "required": false},
+        {"name": "bundle_state", "type": "enum:bundle_state", "default": "LOOSE", "required": false},
+        {"name": "hands", "type": "enum:['one','two']", "default": "two", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W('P1')", "mass_g": "1.0", "n_sub": 1, "role": "reach"},
+        {"type": "grasp", "plies": "plies", "extra_s": "g_bundle * IN(bundle_state, ['TIED','CUT_EDGE_STUCK'])", "role": "acquire"},
+        {"type": "point", "D": "10*distance_cm", "W": "W('P1')", "mass_g": "mass_g", "n_sub": 1, "role": "bring_to_work_point"},
+        {"type": "point", "D": "40.0", "W": "W(match_precision)", "mass_g": "mass_g", "n_sub": "n_match_points", "role": "register_match_points"}
+      ],
+      "combination": "sum_then_bimanual",
+      "bimanual": "max_with_coupling_penalty_if_two_hands",
+      "bimanual_rule": "If hands=='two', the reach+acquire phases of the two hands are simultaneous: t = MAX(t_left, t_right) * (1 + epsilon_bi). The engine applies this to the reach and acquire phases only; registration of match points is sequential.",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "The 40 mm correction amplitude for registering a match point is a convention of this model: it is the local corrective sub-movement amplitude, not the gross transport distance. It is exposed as an engine constant D_match_mm (default 40) so it can be calibrated."
+    },
+    {
+      "code": "HAB",
+      "name": "separate_ply_from_bundle",
+      "intent": "Peel a single ply (or a matched pair) off a clamped or tied bundle without disturbing the stack. Used when the source is a bundle rather than a loose stack.",
+      "signature": "separate_ply_from_bundle(distance_cm, plies, fabric_class, bundle_state='TIED')",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 20.0, "domain": [1.0, 120.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 1, "domain": [1, 8], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "bundle_state", "type": "enum:bundle_state", "default": "TIED", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W('P2')", "mass_g": "1.0", "n_sub": 1, "role": "reach_to_bundle"},
+        {"type": "grasp", "plies": "plies", "extra_s": "g_bundle * IN(bundle_state, ['TIED','CUT_EDGE_STUCK'])", "role": "peel"},
+        {"type": "point", "D": "60.0", "W": "W('P1')", "mass_g": "1.0", "n_sub": 1, "role": "clear_the_stack"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "Distinct from HAG because the limiting act is ply separation, not transport. Use HAG when the part is already free."
+    },
+    {
+      "code": "HTR",
+      "name": "transport_part",
+      "intent": "Move a part already in hand from one place to another without matching (aside, to a folder, to a second station within reach).",
+      "signature": "transport_part(distance_cm, precision_class, fabric_class, mass_g=90)",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 30.0, "domain": [1.0, 150.0], "required": true},
+        {"name": "precision_class", "type": "enum:precision_class", "default": "P1", "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "mass_g", "type": "number", "units": "g", "default": 90.0, "domain": [1.0, 5000.0], "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W(precision_class)", "mass_g": "mass_g", "n_sub": 1, "role": "transport"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING"
+    },
+    {
+      "code": "HPF",
+      "name": "present_under_foot",
+      "intent": "Bring the assembled plies to the needle point, set the edge to the required margin and lower the foot ready to sew.",
+      "signature": "present_under_foot(approach_cm, edge_tolerance_mm, plies, fabric_class, foot_lift='KNEE_LIFT')",
+      "parameters": [
+        {"name": "approach_cm", "type": "number", "units": "cm", "default": 12.0, "domain": [1.0, 60.0], "required": true},
+        {"name": "edge_tolerance_mm", "type": "number", "units": "mm", "default": 2.0, "domain": [0.5, 20.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [1, 8], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "foot_lift", "type": "enum:control_class", "default": "KNEE_LIFT", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*approach_cm", "W": "edge_tolerance_mm", "mass_g": "1.0", "n_sub": 1, "role": "set_edge_at_needle"},
+        {"type": "fixed", "base_s": "control_base_s(foot_lift)", "n_actions": 1, "role": "lower_foot"}
+      ],
+      "combination": "sum",
+      "bimanual": "max_with_coupling_penalty",
+      "overlaps_machine": false,
+      "allowance_profile": "MACHINE_STATION",
+      "notes": "edge_tolerance_mm is given directly rather than via a precision class because seam-margin tolerance is a style spec the planner already knows."
+    },
+    {
+      "code": "HGD",
+      "name": "guide_seam",
+      "intent": "Guide the plies along the stitch line while the machine runs. This is the element that overlaps machine time.",
+      "signature": "guide_seam(path_cm, tolerance_mm, radius_cm=Inf, plies=2, fabric_class='REF_POPLIN', guided_by='HAND')",
+      "parameters": [
+        {"name": "path_cm", "type": "number", "units": "cm", "default": 20.0, "domain": [0.5, 300.0], "required": true},
+        {"name": "tolerance_mm", "type": "number", "units": "mm", "default": 2.0, "domain": [0.3, 20.0], "required": true},
+        {"name": "radius_cm", "type": "number", "units": "cm", "default": null, "domain": [0.5, 1000.0], "required": false, "null_means": "straight path (infinite radius)"},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [1, 8], "required": false},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false},
+        {"name": "guided_by", "type": "enum:['HAND','EDGE_GUIDE','FOLDER','TEMPLATE']", "default": "HAND", "required": false}
+      ],
+      "phase_program": [
+        {"type": "steer", "L": "10*path_cm", "W": "tolerance_mm * guide_relief(guided_by)", "R": "10*radius_cm", "role": "guide"}
+      ],
+      "guide_relief": {
+        "definition": "Mechanical guidance widens the effective tolerance the operator must hold. Multiplier on tolerance_mm.",
+        "status": "calibration-pending",
+        "values": {"HAND": 1.0, "EDGE_GUIDE": 2.5, "FOLDER": 4.0, "TEMPLATE": 6.0}
+      },
+      "combination": "sum",
+      "bimanual": "coupled_two_hand_single_task",
+      "overlaps_machine": true,
+      "allowance_profile": "MACHINE_STATION",
+      "notes": "The engine must NOT add this time to machine time. See assembly_rules.machine_overlap: the seam contributes MAX(machine_time, guide_time)."
+    },
+    {
+      "code": "HPV",
+      "name": "pivot_at_corner",
+      "intent": "Stop at a corner, reorient the part about the needle, and resume. Collar points, cuff corners, pocket corners, placket ends.",
+      "signature": "pivot_at_corner(angle_deg, tolerance_mm, plies, fabric_class, needle_stop='AUTO')",
+      "parameters": [
+        {"name": "angle_deg", "type": "number", "units": "degree", "default": 90.0, "domain": [10.0, 180.0], "required": true},
+        {"name": "tolerance_mm", "type": "number", "units": "mm", "default": 1.0, "domain": [0.3, 10.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [1, 8], "required": false},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false},
+        {"name": "needle_stop", "type": "enum:['AUTO','MANUAL_WHEEL']", "default": "AUTO", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "30.0", "W": "tolerance_mm", "mass_g": "1.0", "n_sub": 1, "role": "set_corner_point"},
+        {"type": "fixed", "base_s": "k_theta * (angle_deg / 90.0)", "n_actions": 1, "role": "reorient"},
+        {"type": "fixed", "base_s": "control_base_s('HAND_WHEEL') * IN(needle_stop, ['MANUAL_WHEEL'])", "n_actions": 1, "role": "needle_position"}
+      ],
+      "combination": "sum",
+      "bimanual": "coupled_two_hand_single_task",
+      "overlaps_machine": false,
+      "allowance_profile": "MACHINE_STATION",
+      "notes": "Corner handling is modelled as coupled pointing plus reorientation, after Pastel's corner extension of the steering law. The machine is stopped during the pivot, so this element does not overlap machine time."
+    },
+    {
+      "code": "HRP",
+      "name": "reposition_mid_seam",
+      "intent": "Interrupt the seam to re-grip, smooth, or re-register the plies, then resume. The characteristic recovery act on long or slippery seams.",
+      "signature": "reposition_mid_seam(shift_cm, tolerance_mm, plies, fabric_class, n_events=1)",
+      "parameters": [
+        {"name": "shift_cm", "type": "number", "units": "cm", "default": 8.0, "domain": [0.5, 60.0], "required": true},
+        {"name": "tolerance_mm", "type": "number", "units": "mm", "default": 3.0, "domain": [0.5, 20.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [1, 8], "required": false},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false},
+        {"name": "n_events", "type": "integer", "units": "count", "default": 1, "domain": [1, 20], "required": false}
+      ],
+      "phase_program": [
+        {"type": "grasp", "plies": "plies", "extra_s": "0.0", "role": "regrip"},
+        {"type": "point", "D": "10*shift_cm", "W": "tolerance_mm", "mass_g": "1.0", "n_sub": 1, "role": "re_register"}
+      ],
+      "combination": "sum_times_n_events",
+      "bimanual": "max_with_coupling_penalty",
+      "overlaps_machine": false,
+      "allowance_profile": "MACHINE_STATION",
+      "notes": "n_events should be predicted, not guessed: the recommended default rule is n_events = ceil(path_cm / L_grip_cm) - 1 where L_grip_cm is the operator's comfortable single-grip span (engine constant, default 25 cm, calibration-pending). Slippery and limp classes reduce L_grip_cm; that dependence is calibration-pending."
+    },
+    {
+      "code": "HFD",
+      "name": "engage_folder_or_guide",
+      "intent": "Feed a raw edge into a folder, binder, or edge guide and establish the fold before stitching begins.",
+      "signature": "engage_folder_or_guide(insert_length_cm, throat_tolerance_mm, plies, fabric_class, attachment='FOLDER')",
+      "parameters": [
+        {"name": "insert_length_cm", "type": "number", "units": "cm", "default": 4.0, "domain": [0.5, 30.0], "required": true},
+        {"name": "throat_tolerance_mm", "type": "number", "units": "mm", "default": 1.0, "domain": [0.2, 10.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 1, "domain": [1, 6], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "attachment", "type": "enum:['FOLDER','BINDER','EDGE_GUIDE','HEMMER']", "default": "FOLDER", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "60.0", "W": "throat_tolerance_mm", "mass_g": "1.0", "n_sub": 2, "role": "aim_edge_into_throat"},
+        {"type": "steer", "L": "10*insert_length_cm", "W": "throat_tolerance_mm", "R": "null", "role": "feed_through_throat"}
+      ],
+      "combination": "sum",
+      "bimanual": "max_with_coupling_penalty",
+      "overlaps_machine": false,
+      "allowance_profile": "MACHINE_STATION",
+      "notes": "Two aiming sub-movements are the default because entering a narrow throat characteristically requires one approach and one correction. This count is exposed as an engine constant n_throat_aim (default 2, calibration-pending)."
+    },
+    {
+      "code": "HAL",
+      "name": "align_edges_by_hand",
+      "intent": "Run a match along a length of two edges away from the needle (walking the fingers along, easing fullness in) before or during presentation.",
+      "signature": "align_edges_by_hand(match_length_cm, tolerance_mm, plies, fabric_class, ease_pct=0.0)",
+      "parameters": [
+        {"name": "match_length_cm", "type": "number", "units": "cm", "default": 20.0, "domain": [1.0, 150.0], "required": true},
+        {"name": "tolerance_mm", "type": "number", "units": "mm", "default": 3.0, "domain": [0.5, 20.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [2, 8], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "ease_pct", "type": "number", "units": "percent", "default": 0.0, "domain": [0.0, 20.0], "required": false}
+      ],
+      "phase_program": [
+        {"type": "steer", "L": "10*match_length_cm", "W": "tolerance_mm", "R": "null", "role": "running_match"},
+        {"type": "fixed", "base_s": "k_ease * (ease_pct / 10.0)", "n_actions": 1, "role": "distribute_ease"}
+      ],
+      "combination": "sum",
+      "bimanual": "coupled_two_hand_single_task",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "k_ease is an engine constant (default 0.40 s per 10% ease over the matched length, calibration-pending) covering the distribution of sleeve-head or yoke ease."
+    },
+    {
+      "code": "HFC",
+      "name": "fold_or_crease",
+      "intent": "Form a fold or crease by hand: turn a hem allowance, pre-fold a placket, crease a pleat, turn a seam allowance under.",
+      "signature": "fold_or_crease(fold_length_cm, fold_depth_mm, n_folds, plies, fabric_class, aid='NONE')",
+      "parameters": [
+        {"name": "fold_length_cm", "type": "number", "units": "cm", "default": 15.0, "domain": [1.0, 150.0], "required": true},
+        {"name": "fold_depth_mm", "type": "number", "units": "mm", "default": 8.0, "domain": [1.0, 60.0], "required": true},
+        {"name": "n_folds", "type": "integer", "units": "count", "default": 1, "domain": [1, 6], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 1, "domain": [1, 6], "required": false},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false},
+        {"name": "aid", "type": "enum:['NONE','TEMPLATE','PRESS']", "default": "NONE", "required": false}
+      ],
+      "phase_program": [
+        {"type": "grasp", "plies": "plies", "extra_s": "0.0", "role": "pinch_the_fold"},
+        {"type": "steer", "L": "10*fold_length_cm", "W": "fold_depth_mm * fold_tolerance_frac", "R": "null", "role": "run_the_crease"}
+      ],
+      "combination": "sum_times_n_folds",
+      "bimanual": "coupled_two_hand_single_task",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "The fold tolerance is taken as a fraction of the fold depth (engine constant fold_tolerance_frac, default 0.25, calibration-pending): a deeper fold is proportionally easier to hold to width. aid='TEMPLATE' or 'PRESS' should widen that tolerance; the multipliers are calibration-pending and default to 1.0."
+    },
+    {
+      "code": "HTO",
+      "name": "turn_component_through",
+      "intent": "Turn a closed component right side out and push out its corners. Collars, cuffs, tab ends, belt loops.",
+      "signature": "turn_component_through(perimeter_cm, n_corners, plies, fabric_class, tool='NONE_AUTO')",
+      "parameters": [
+        {"name": "perimeter_cm", "type": "number", "units": "cm", "default": 40.0, "domain": [5.0, 200.0], "required": true},
+        {"name": "n_corners", "type": "integer", "units": "count", "default": 2, "domain": [0, 8], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [2, 8], "required": false},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "FUSED_PANEL", "required": false},
+        {"name": "tool", "type": "enum:tool_class", "default": "NONE_AUTO", "required": false}
+      ],
+      "phase_program": [
+        {"type": "grasp", "plies": "plies", "extra_s": "0.0", "role": "grip_to_turn"},
+        {"type": "steer", "L": "5*perimeter_cm", "W": "W('P1')", "R": "null", "role": "invert_through"},
+        {"type": "point", "D": "40.0", "W": "W('P4')", "mass_g": "1.0", "n_sub": "n_corners", "role": "push_out_corners"},
+        {"type": "fixed", "base_s": "tool_base_s(tool)", "n_actions": "MIN(n_corners, 1)", "role": "acquire_turning_tool"}
+      ],
+      "combination": "sum",
+      "bimanual": "coupled_two_hand_single_task",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "The inversion path length is taken as half the perimeter (the fabric travels through itself). Corners are pointed acts at the finest tolerance class because a collar point is the tightest positional target in a woven top."
+    },
+    {
+      "code": "HTU",
+      "name": "use_hand_tool",
+      "intent": "Acquire a hand tool, perform n discrete acts with it, and return it. Generic tool element; use HTC for thread trimming and HMK for marking.",
+      "signature": "use_hand_tool(tool_class, reach_cm, n_actions, precision_class, fabric_class)",
+      "parameters": [
+        {"name": "tool_class", "type": "enum:tool_class", "default": "SCISSORS", "required": true},
+        {"name": "reach_cm", "type": "number", "units": "cm", "default": 25.0, "domain": [1.0, 100.0], "required": true},
+        {"name": "n_actions", "type": "integer", "units": "count", "default": 1, "domain": [1, 30], "required": true},
+        {"name": "precision_class", "type": "enum:precision_class", "default": "P3", "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*reach_cm", "W": "W('P1')", "mass_g": "1.0", "n_sub": 1, "role": "reach_to_tool"},
+        {"type": "fixed", "base_s": "tool_base_s(tool_class)", "n_actions": 1, "role": "acquire_and_orient_tool"},
+        {"type": "point", "D": "80.0", "W": "W(precision_class)", "mass_g": "1.0", "n_sub": "n_actions", "role": "place_tool_at_work"},
+        {"type": "fixed", "base_s": "tool_action_s(tool_class)", "n_actions": "n_actions", "role": "act"},
+        {"type": "point", "D": "10*reach_cm", "W": "W('P0')", "mass_g": "1.0", "n_sub": 1, "role": "return_tool"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING"
+    },
+    {
+      "code": "HTC",
+      "name": "trim_thread_ends",
+      "intent": "Cut thread ends at the end of a seam or on a finished component.",
+      "signature": "trim_thread_ends(n_ends, tool_class, reach_cm, fabric_class)",
+      "parameters": [
+        {"name": "n_ends", "type": "integer", "units": "count", "default": 2, "domain": [0, 20], "required": true},
+        {"name": "tool_class", "type": "enum:tool_class", "default": "NIPPER", "required": true},
+        {"name": "reach_cm", "type": "number", "units": "cm", "default": 15.0, "domain": [0.0, 80.0], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*reach_cm", "W": "W('P1')", "mass_g": "1.0", "n_sub": 1, "role": "reach_to_nipper"},
+        {"type": "fixed", "base_s": "tool_base_s(tool_class)", "n_actions": 1, "role": "acquire_tool"},
+        {"type": "point", "D": "50.0", "W": "W('P3')", "mass_g": "1.0", "n_sub": "n_ends", "role": "aim_at_thread_end"},
+        {"type": "fixed", "base_s": "tool_action_s(tool_class)", "n_actions": "n_ends", "role": "snip"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "With tool_class='NONE_AUTO' (machine auto-trimmer) the tool phases collapse to near zero, which is how the engine represents an automatic thread trimmer without a separate element."
+    },
+    {
+      "code": "HMK",
+      "name": "mark_position",
+      "intent": "Transfer a position onto the work: chalk a pocket corner, mark a buttonhole spacing, set a template.",
+      "signature": "mark_position(n_marks, tool_class, reach_cm, precision_class, fabric_class)",
+      "parameters": [
+        {"name": "n_marks", "type": "integer", "units": "count", "default": 2, "domain": [1, 30], "required": true},
+        {"name": "tool_class", "type": "enum:tool_class", "default": "MARKER", "required": true},
+        {"name": "reach_cm", "type": "number", "units": "cm", "default": 25.0, "domain": [1.0, 80.0], "required": true},
+        {"name": "precision_class", "type": "enum:precision_class", "default": "P3", "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*reach_cm", "W": "W('P1')", "mass_g": "1.0", "n_sub": 1, "role": "reach_to_marker"},
+        {"type": "fixed", "base_s": "tool_base_s(tool_class)", "n_actions": 1, "role": "acquire_marker"},
+        {"type": "point", "D": "100.0", "W": "W(precision_class)", "mass_g": "1.0", "n_sub": "n_marks", "role": "locate_mark"},
+        {"type": "fixed", "base_s": "tool_action_s(tool_class)", "n_actions": "n_marks", "role": "make_mark"},
+        {"type": "cognitive", "k_class": "inspect_k('GLANCE')", "n_checks": 1, "role": "verify"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING"
+    },
+    {
+      "code": "HAC",
+      "name": "actuate_machine_control",
+      "intent": "Discrete operator action on a machine control that is not part of guiding: backtack, knee lift outside presentation, hand wheel, reverse lever.",
+      "signature": "actuate_machine_control(control_class, reach_cm, n_actions=1)",
+      "parameters": [
+        {"name": "control_class", "type": "enum:control_class", "default": "BACKTACK", "required": true},
+        {"name": "reach_cm", "type": "number", "units": "cm", "default": 10.0, "domain": [0.0, 60.0], "required": true},
+        {"name": "n_actions", "type": "integer", "units": "count", "default": 1, "domain": [1, 10], "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*reach_cm", "W": "W('P1')", "mass_g": "1.0", "n_sub": "n_actions", "role": "reach_to_control"},
+        {"type": "fixed", "base_s": "control_base_s(control_class)", "n_actions": "n_actions", "role": "actuate"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MACHINE_STATION"
+    },
+    {
+      "code": "HDS",
+      "name": "dispose_and_stack",
+      "intent": "Move the finished part or garment away from the needle and place it on the output stack, rail, box, or conveyor.",
+      "signature": "dispose_and_stack(distance_cm, precision_class, mass_g, fabric_class, orientation_required=false)",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 35.0, "domain": [5.0, 150.0], "required": true},
+        {"name": "precision_class", "type": "enum:precision_class", "default": "P0", "required": true},
+        {"name": "mass_g", "type": "number", "units": "g", "default": 120.0, "domain": [1.0, 3000.0], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false},
+        {"name": "orientation_required", "type": "boolean", "default": false, "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W(precision_class)", "mass_g": "mass_g", "n_sub": 1, "role": "carry_to_stack"},
+        {"type": "point", "D": "60.0", "W": "W('P1')", "mass_g": "mass_g", "n_sub": "IN(orientation_required, [true])", "role": "square_up_on_stack"},
+        {"type": "point", "D": "10*distance_cm", "W": "W('P1')", "mass_g": "1.0", "n_sub": 1, "role": "return_hand"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "The return of the empty hand is included here rather than in the next element's reach, so that element times remain additive without double counting. Engines must not also charge a reach in the following acquire element for the same hand travel; see assembly_rules.no_double_count."
+    },
+    {
+      "code": "HBO",
+      "name": "bundle_open",
+      "intent": "Open the incoming bundle at the start of a bundle cycle: untie or unclamp and spread the stack for work.",
+      "signature": "bundle_open(n_ties, tie_type, reach_cm, mass_kg)",
+      "parameters": [
+        {"name": "n_ties", "type": "integer", "units": "count", "default": 1, "domain": [0, 6], "required": true},
+        {"name": "tie_type", "type": "enum:tie_type", "default": "CLOTH_KNOT", "required": true},
+        {"name": "reach_cm", "type": "number", "units": "cm", "default": 40.0, "domain": [5.0, 120.0], "required": true},
+        {"name": "mass_kg", "type": "number", "units": "kg", "default": 2.0, "domain": [0.1, 15.0], "required": true}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*reach_cm", "W": "W('P1')", "mass_g": "1000*mass_kg", "n_sub": 1, "role": "reach_to_bundle"},
+        {"type": "fixed", "base_s": "tie_open_s(tie_type)", "n_actions": "n_ties", "role": "release_ties"},
+        {"type": "point", "D": "150.0", "W": "W('P1')", "mass_g": "1000*mass_kg", "n_sub": 1, "role": "spread_stack"}
+      ],
+      "combination": "sum",
+      "bimanual": "max_with_coupling_penalty",
+      "overlaps_machine": false,
+      "allowance_profile": "BUNDLE",
+      "notes": "Charged once per bundle, not per garment. The engine divides by bundle_size when converting to per-garment time; see assembly_rules.bundle_amortisation."
+    },
+    {
+      "code": "HBC",
+      "name": "bundle_close",
+      "intent": "Square up, retie or reclamp the outgoing bundle and attach or transfer its ticket.",
+      "signature": "bundle_close(n_ties, tie_type, reach_cm, mass_kg, ticket=false)",
+      "parameters": [
+        {"name": "n_ties", "type": "integer", "units": "count", "default": 1, "domain": [0, 6], "required": true},
+        {"name": "tie_type", "type": "enum:tie_type", "default": "CLOTH_KNOT", "required": true},
+        {"name": "reach_cm", "type": "number", "units": "cm", "default": 40.0, "domain": [5.0, 120.0], "required": true},
+        {"name": "mass_kg", "type": "number", "units": "kg", "default": 2.0, "domain": [0.1, 15.0], "required": true},
+        {"name": "ticket", "type": "boolean", "default": false, "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "150.0", "W": "W('P1')", "mass_g": "1000*mass_kg", "n_sub": 2, "role": "square_the_stack"},
+        {"type": "fixed", "base_s": "tie_close_s(tie_type)", "n_actions": "n_ties", "role": "secure_ties"},
+        {"type": "point", "D": "10*reach_cm", "W": "W('P2')", "mass_g": "20.0", "n_sub": "IN(ticket, [true])", "role": "handle_ticket"}
+      ],
+      "combination": "sum",
+      "bimanual": "max_with_coupling_penalty",
+      "overlaps_machine": false,
+      "allowance_profile": "BUNDLE",
+      "notes": "Charged once per bundle; amortised over bundle_size."
+    },
+    {
+      "code": "HBM",
+      "name": "bundle_move",
+      "intent": "Move the bundle into or out of the workstation: lift from a trolley, slide along a table, push to the next station.",
+      "signature": "bundle_move(distance_cm, mass_kg, mode)",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 60.0, "domain": [5.0, 600.0], "required": true},
+        {"name": "mass_kg", "type": "number", "units": "kg", "default": 2.0, "domain": [0.1, 20.0], "required": true},
+        {"name": "mode", "type": "enum:['LIFT','SLIDE','PUSH_TROLLEY','WALK']", "default": "SLIDE", "required": true}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W('P1')", "mass_g": "1000*mass_kg", "n_sub": 1, "role": "move_bundle"},
+        {"type": "fixed", "base_s": "mode_base_s(mode)", "n_actions": 1, "role": "mode_overhead"}
+      ],
+      "combination": "sum",
+      "bimanual": "max_with_coupling_penalty",
+      "overlaps_machine": false,
+      "allowance_profile": "BUNDLE",
+      "mode_base_s": {"status": "calibration-pending", "values": {"LIFT": 0.60, "SLIDE": 0.20, "PUSH_TROLLEY": 0.80, "WALK": 0.0}},
+      "notes": "mode='WALK' is out of scope for this model: walking time must be measured, not derived from Fitts' law, and the engine should require an explicit measured value. Charged once per bundle; amortised over bundle_size."
+    },
+    {
+      "code": "HIN",
+      "name": "inspect_work",
+      "intent": "Visual or tactile verification of the work in process: face side, notch match, seam quality, symmetry.",
+      "signature": "inspect_work(n_checks, inspect_class, fabric_class)",
+      "parameters": [
+        {"name": "n_checks", "type": "integer", "units": "count", "default": 1, "domain": [1, 20], "required": true},
+        {"name": "inspect_class", "type": "enum:inspect_class", "default": "GLANCE", "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": false}
+      ],
+      "phase_program": [
+        {"type": "cognitive", "k_class": "inspect_k(inspect_class)", "n_checks": "n_checks", "role": "verify"}
+      ],
+      "combination": "sum",
+      "bimanual": "not_applicable",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "Deliberately the least mechanistic element in the taxonomy. If a factory's studies show inspection is a material share of an operation, it should be measured directly rather than modelled."
+    },
+    {
+      "code": "HSM",
+      "name": "smooth_and_tension",
+      "intent": "Smooth out fullness, distortion, or trapped air across a span of fabric; set tension in the plies before or during sewing.",
+      "signature": "smooth_and_tension(span_cm, plies, fabric_class, n_passes=1)",
+      "parameters": [
+        {"name": "span_cm", "type": "number", "units": "cm", "default": 25.0, "domain": [2.0, 150.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [1, 8], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "n_passes", "type": "integer", "units": "count", "default": 1, "domain": [1, 6], "required": false}
+      ],
+      "phase_program": [
+        {"type": "steer", "L": "10*span_cm", "W": "W('P1')", "R": "null", "role": "sweep"}
+      ],
+      "combination": "sum_times_n_passes",
+      "bimanual": "coupled_two_hand_single_task",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "Modelled as a wide-tolerance steering pass: the hand traverses a length under loose lateral constraint."
+    },
+    {
+      "code": "HAS",
+      "name": "aside_and_regrasp",
+      "intent": "Put the part down, change grip or hand, and pick it up again. The residual element for method transitions that are neither transport nor disposal.",
+      "signature": "aside_and_regrasp(distance_cm, plies, fabric_class, precision_class='P1')",
+      "parameters": [
+        {"name": "distance_cm", "type": "number", "units": "cm", "default": 10.0, "domain": [1.0, 60.0], "required": true},
+        {"name": "plies", "type": "integer", "units": "count", "default": 2, "domain": [1, 8], "required": true},
+        {"name": "fabric_class", "type": "enum:fabric_class", "default": "REF_POPLIN", "required": true},
+        {"name": "precision_class", "type": "enum:precision_class", "default": "P1", "required": false}
+      ],
+      "phase_program": [
+        {"type": "point", "D": "10*distance_cm", "W": "W(precision_class)", "mass_g": "60.0", "n_sub": 1, "role": "set_down"},
+        {"type": "grasp", "plies": "plies", "extra_s": "0.0", "role": "regrasp"}
+      ],
+      "combination": "sum",
+      "bimanual": "single_hand",
+      "overlaps_machine": false,
+      "allowance_profile": "MANUAL_HANDLING",
+      "notes": "Exists so that analysts are not forced to mis-code a grip change as a transport. Frequent use of HAS in an operation is a method-improvement signal and the UI should surface it."
+    }
+  ],
+
+  "assembly_rules": {
+    "element_time": "t_basic(e) = Gamma_skill * combine( phase times per the element's combination rule )",
+    "combination_rules": {
+      "sum": "t = sum of phase times",
+      "sum_times_n_events": "t = n_events * sum of phase times",
+      "sum_times_n_folds": "t = n_folds * sum of phase times",
+      "sum_times_n_passes": "t = n_passes * sum of phase times",
+      "sum_then_bimanual": "phases flagged simultaneous are combined as MAX(hand_left, hand_right) * (1 + epsilon_bi); the remainder are summed"
+    },
+    "bimanual": {
+      "rule": "Where two hands act simultaneously on distinct targets, the element time is MAX of the two hands' times multiplied by (1 + epsilon_bi), never the sum.",
+      "basis": "Kelso, Southard & Goodman 1979: two-handed movements to targets of disparate difficulty are executed simultaneously, the easier hand slowing to match the harder one.",
+      "engine_requirement": "The audit trail must record which hand was limiting."
+    },
+    "machine_overlap": {
+      "rule": "For each sewn seam segment j: t_seam(j) = MAX( t_machine(j), t_guide(j) ) where t_machine comes from the machine-time pillar and t_guide is the HGD element time for that segment.",
+      "consequence": "Achieved stitch rate is an OUTPUT, not an input: SPM_achieved(j) = stitches(j) / t_seam(j) * 60. The guidance-limited feed speed implied by the steering law is v_guide = W_eff / b_steer.",
+      "why_it_matters": "This is how the engine explains the gap between rated and achieved SPM without an empirical fudge factor: on coarse stitch densities and tight tolerances the operator's guidance is the binding constraint; on fine stitch densities the machine is.",
+      "engine_requirement": "The audit trail must record which of the two was binding for every seam segment."
+    },
+    "no_double_count": "Hand-return travel is charged in HDS (dispose) and in HAG/HAM (out-and-back). An operation model must not charge the same hand travel twice; the validator should flag any operation where a HDS is immediately followed by an acquire element whose distance_cm exceeds the HDS distance_cm, as that is likely a double count.",
+    "bundle_amortisation": "Elements with allowance_profile 'BUNDLE' are charged once per bundle. Per-garment contribution = t_basic(e) / bundle_size. bundle_size is a style/line parameter, not an element parameter, and must appear in the audit trail.",
+    "operation_basic_time": "BT_op = sum over non-overlapping handling elements + sum over seam segments of MAX(t_machine, t_guide) + sum over bundle elements of t/bundle_size",
+    "operation_standard_time": "ST_op = sum over elements of BT_e * (1 + sum of applicable allowance fractions), per allowance_policy.json. Allowances are applied per element, never to the operation as a single lump, so that machine-delay allowance can be restricted to machine time.",
+    "style_smv": "SMV_style = sum over operations of ST_op, expressed in minutes. Report also in TMU using 1 min = 1666.6667 TMU.",
+    "audit_trail_minimum": [
+      "element code and all parameter values as supplied",
+      "resolved class-table values used (W in mm, fabric descriptors, tool constants)",
+      "every phase time in seconds",
+      "limb class selected for each point phase",
+      "PHI value applied per phase and whether it was clamped",
+      "which hand was limiting for bimanual elements",
+      "which of machine/guide was binding per seam segment",
+      "global parameter set id and version",
+      "allowance policy id, version, and the categories applied",
+      "calibration run id that produced the coefficient values"
+    ]
+  },
+
+  "engine_constants": [
+    {"symbol": "D_match_mm", "meaning": "corrective sub-movement amplitude when registering a match point", "units": "mm", "default": 40.0, "status": "calibration-pending"},
+    {"symbol": "L_grip_cm", "meaning": "comfortable single-grip span before a mid-seam regrip is needed", "units": "cm", "default": 25.0, "status": "calibration-pending"},
+    {"symbol": "n_throat_aim", "meaning": "aiming sub-movements to enter a folder throat", "units": "count", "default": 2, "status": "calibration-pending"},
+    {"symbol": "fold_tolerance_frac", "meaning": "fold-width tolerance as a fraction of fold depth", "units": "dimensionless", "default": 0.25, "status": "calibration-pending"},
+    {"symbol": "k_ease", "meaning": "ease-distribution adder per 10% ease over the matched length", "units": "s", "default": 0.40, "status": "calibration-pending"}
+  ],
+
+  "coverage_check": {
+    "required_by_brief": {
+      "get-and-match parts": ["HAM", "HAG", "HAB"],
+      "align under presser foot": ["HPF"],
+      "pivot/turn at corner": ["HPV"],
+      "reposition mid-seam": ["HRP"],
+      "fold or crease": ["HFC", "HTO"],
+      "insert into folder/attachment": ["HFD"],
+      "tool use (scissors, awl)": ["HTU"],
+      "trim thread": ["HTC"],
+      "dispose/stack finished piece": ["HDS"],
+      "bundle open/close/tie": ["HBO", "HBC", "HBM"],
+      "inspect": ["HIN"],
+      "mark": ["HMK"]
+    },
+    "additional": {
+      "guide the seam while sewing (the machine-overlap hook)": ["HGD"],
+      "hand-run a match along a length / distribute ease": ["HAL"],
+      "smooth out fullness or distortion": ["HSM"],
+      "discrete machine-control actions": ["HAC"],
+      "transport without matching": ["HTR"],
+      "grip change / put down and pick up": ["HAS"]
+    }
+  }
+}

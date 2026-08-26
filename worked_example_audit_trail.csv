@@ -1,0 +1,7 @@
+step_kind,code,count,binding_side,t_basic_s,allowance_pct,t_standard_s,t_standard_min
+handling,HAM,1,,3.1286,22.04,3.818,0.06363
+handling,HPF,1,,0.6842,27.0,0.8689,0.01448
+seam,SNLS-TOP,2,guide,52.6174,26.0,66.2979,1.10496
+handling,HTC,2,,3.1749,22.0,3.8734,0.06456
+handling,HDS,1,,1.5483,22.08,1.8901,0.0315
+TOTAL,,,,61.1533,,76.7484,1.27914

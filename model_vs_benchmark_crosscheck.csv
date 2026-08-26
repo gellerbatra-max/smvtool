@@ -1,0 +1,9 @@
+component,operation,length_mm,rated_spm,model_sew_time_s
+back_yoke,Join yoke to back (with pleats),455.0,5000.0,3.54
+back_yoke,Close yoke at shoulder / attach fronts (,837.2,5000.0,6.19
+back_yoke,Topstitch yoke seam,455.0,3000.0,8.11
+sleeve,"Sleeve inseam (underarm), felled or over",1101.0,4000.0,9.49
+sleeve,Sleeve placket (gauntlet) set + topstitc,620.0,5000.0,11.0
+sleeve,Hem sleeve head / attach sleeve to armho,1070.0,5000.0,11.92
+armhole,Close armhole seam felling / topstitch,1070.0,5000.0,18.87
+side_seam,Close side seam (felled or safety-stitch,1015.0,4000.0,8.78
