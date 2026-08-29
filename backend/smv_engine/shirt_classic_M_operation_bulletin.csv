@@ -1,0 +1,28 @@
+operation,ST_op_min,ST_op_s
+armhole: Close armhole seam felling / topstitch (size M),1.274201336220393,76.45208017322358
+collar_band: Topstitch collar band (size M),1.269717796938612,76.18306781631672
+cuff: Topstitch cuff edge (size M),1.0037984484927178,60.227906909563075
+sleeve: Hem sleeve head / attach sleeve to armhole (size M),0.7997923808639886,47.987542851839315
+collar: Topstitch/edge-stitch collar outer edge (size M),0.677470538417473,40.648232305048374
+front_placket: Stitch buttonhole-side front edge / band (size M),0.6487997058509772,38.92798235105863
+sleeve: Sleeve placket (gauntlet) set + topstitch (size M),0.5798521382763876,34.79112829658325
+pocket: Set pocket to front (3 sides + point) (size M),0.544340866775491,32.66045200652946
+back_yoke: Topstitch yoke seam (size M),0.5158718634969389,30.952311809816337
+all: Button sew (flat 2/4-hole) (size M),0.5116391784289166,30.698350705734995
+back_yoke: Close yoke at shoulder / attach fronts (both shoulders) (size M),0.4086319860234918,24.51791916140951
+cuff: Attach cuff to sleeve (size M),0.4009605373583608,24.057632241501647
+collar_band: Attach collar band to neckline (set collar) (size M),0.37108688328695855,22.265212997217514
+side_seam: Close side seam (felled or safety-stitch) (size M),0.36750390772404784,22.05023446344287
+"sleeve: Sleeve inseam (underarm), felled or overlocked (size M)",0.3661006049430542,21.96603629658325
+cuff: Run-stitch cuff (3 sides) (size M),0.3621630961903168,21.729785771419007
+"front_placket: Buttonhole, front placket (size M)",0.3551653463985737,21.309920783914425
+collar_band: Attach band to collar leaf + close band (size M),0.35459953082703716,21.27597184962223
+"bottom_hem: Hem bottom (folder, shirt-tail curve) (size M)",0.28520801786738004,17.1124810720428
+front_placket: Form + stitch front placket (button side) (size M),0.2688922225176439,16.133533351058635
+"collar: Run-stitch collar (close top+under collar, 3 sides) (size M)",0.2627363392211285,15.764180353267708
+back_yoke: Join yoke to back (with pleats) (size M),0.26161930527520433,15.697158316512258
+"cuff: Buttonhole, cuff (incl. adjustment) (size M)",0.2403059606288182,14.418357637729093
+pocket: Hem pocket top (size M),0.1358079242719091,8.148475456314547
+"sleeve_placket: Buttonhole, gauntlet (size M)",0.12841923276059383,7.705153965635629
+"pocket: Bartack, pocket mouth corners (size M)",0.10553035071273366,6.33182104276402
+"collar_band: Buttonhole, collar band (size M)",0.07250475778556177,4.350285467133706

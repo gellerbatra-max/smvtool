@@ -1,0 +1,15 @@
+metric,value
+operation_ST_delta_min,-0.06286
+operation_ST_delta_pct,-17.105
+base_style_smv_min,12.5727
+modified_style_smv_min,12.5099
+style_smv_delta_min,-0.06286
+style_smv_delta_pct,-0.5
+base_bottleneck_workstation,6
+modified_bottleneck_workstation,6
+bottleneck_smv_delta_min,0.0
+base_theoretical_efficiency,0.80998
+modified_theoretical_efficiency,0.80593
+base_cost_per_garment,0.8382
+modified_cost_per_garment,0.834
+cost_delta_per_garment,-0.00419

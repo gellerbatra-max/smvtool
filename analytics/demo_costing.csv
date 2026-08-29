@@ -1,0 +1,10 @@
+metric,value
+smv_min,12.5727
+labour_rate_per_hour,3.2
+efficiency,0.8
+cost_per_garment,0.8382
+output_per_hour_at_n_operators,38.18
+output_per_shift_at_n_operators,305.4
+daily_labour_cost_at_n_operators,256.0
+operators_required_for_target,12
+operators_required_for_target_raw,11.787

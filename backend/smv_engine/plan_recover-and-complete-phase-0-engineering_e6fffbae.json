@@ -1,0 +1,53 @@
+{
+  "version": 3,
+  "created_at": "2026-08-25T17:27:33.451Z",
+  "task_summary": "Recover and complete Phase 0 (Engineering Foundation) of the self-calibrating SMV engine",
+  "agents": [],
+  "phases": [
+    {
+      "name": "Plan",
+      "delegations": [
+        {
+          "steps": [
+            {
+              "title": "Save recovered Motion-model deliverables",
+              "description": "Save the already-reconstructed motion_model.md, element_taxonomy.json, and allowance_policy.json to this project as artifacts. These were verified byte-for-byte against the failed session's own validation checks (23 elements, 30 global parameters, 5 engine constants, 12 allowance categories, matching file sizes) and already passed IP-safety review (no GSD/MTM/TMU-by-distance tables) and a reviewer-caught arithmetic fix in allowance_policy.json."
+            },
+            {
+              "title": "Rebuild and validate the machine-data track",
+              "description": "Re-execute the captured code from the failed session to regenerate effective_spm.py (kinematic rated-to-achieved sewing speed model: set-speed/ply derate, Fitts-law-style operator guidance cap, trapezoidal ramp efficiency, pivot/trim/endstop fixed costs), machine_classes.csv (~18 machine/attachment classes with sourced catalogue speeds, ESTIMATE-flagged where no spec exists), and seam_geometry.json (per-size stitch-path lengths for a men's woven dress shirt, geometrically derived from points-of-measure, each entry tagged SOURCED/DERIVED_GEOMETRIC/ESTIMATE). Run the theoretical-max-speed grounded check (5000 sti/min at 8 SPI -> 17.4 yd/min, at 14 SPI -> 9.9 yd/min) to confirm the model reproduces literature reference points. Verify no predetermined-motion-time table values appear anywhere in the outputs."
+            },
+            {
+              "title": "Render effective-speed model figure",
+              "description": "Produce a publication-quality two-panel figure (effective_spm_model.png) showing achieved average SPM vs. seam length across curvature/guidance classes (straight/gentle/moderate/tight/very_tight; mechanically-guided vs. tracked), with the rated-speed and set-speed-cap reference lines annotated, replicating and refining the analysis from the interrupted session. Use the figure-style skill for a deliverable-quality render."
+            },
+            {
+              "title": "Harvest published SMV/GSD/BKG comparison benchmarks",
+              "description": "Search and fetch open-access literature (continuing from partially-retrieved Vietnam Journal of Mechanics, CSSE, and RMG-chapter sources already identified) for published woven-shirt/blouse sewing time benchmarks comparing predetermined-time systems (GSD/BKG/SAM/MTM) at the operation level. Extract any legitimately-published aggregate comparison ratios or total SMV figures for shirt assembly (never element-level TMU/GSD-code tables) into smv_benchmarks.csv, with full citation and page/table provenance per row."
+            },
+            {
+              "title": "Write benchmark report and reconcile against the synthetic model",
+              "description": "Write benchmark_report.md summarizing what published benchmark data was found and its limitations (paywall-blocked sources, scarcity of woven-shirt-specific public data), and run the seam_geometry.json machine-time crosscheck plus a first-pass handling-time estimate against any available comparison figures to sanity-check the synthetic model's plausibility, flagging remaining calibration-pending gaps honestly."
+            },
+            {
+              "title": "Write Phase-0 completion report",
+              "description": "Write phase0_completion_report.md consolidating the three tracks (motion model, machine data, benchmarks): what's SOURCED vs DERIVED_GEOMETRIC vs ESTIMATE across all deliverables, the explicit IP-provenance statement (no predetermined-motion-time table data reproduced anywhere), open calibration-pending items, and recommended next steps for Phase 1 (calculation engine)."
+            }
+          ]
+        }
+      ],
+      "id": "phase-0"
+    }
+  ],
+  "desired_outputs": [
+    "motion_model.md, element_taxonomy.json, allowance_policy.json (recovered)",
+    "effective_spm.py, machine_classes.csv, seam_geometry.json (rebuilt from transcript code)",
+    "effective_spm_model.png figure (rated vs achieved speed by curvature/guidance class)",
+    "smv_benchmarks.csv + benchmark_report.md (new literature harvest)",
+    "phase0_completion_report.md summarizing all three tracks + IP-safety statement"
+  ],
+  "feasibility": {
+    "rationale": "The Motion-model track is fully recovered and verified byte-for-byte against the failed session's own validation. The Machine-data track's code was captured in full from the transcript and is directly re-runnable. The Benchmarks track needs fresh literature work since it was never completed, but open-access shirt/SMV comparison sources were already identified in the failed run.",
+    "confidence": "high"
+  }
+}

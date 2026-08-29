@@ -1,0 +1,903 @@
+{
+  "schema_version": "1.0",
+  "product": "Men's woven shirt, classic regular fit, two-piece collar, set-in sleeve, tower sleeve placket, front placket, back yoke, one patch pocket, curved shirt-tail hem",
+  "unit": "mm (stitch-path length); counts are dimensionless",
+  "sizes": [
+    "S",
+    "M",
+    "L",
+    "XL",
+    "XXL"
+  ],
+  "size_key": {
+    "S": {
+      "collar_in": 15.0,
+      "collar_mm": 381.0
+    },
+    "M": {
+      "collar_in": 15.5,
+      "collar_mm": 393.7
+    },
+    "L": {
+      "collar_in": 16.0,
+      "collar_mm": 406.4
+    },
+    "XL": {
+      "collar_in": 16.5,
+      "collar_mm": 419.1
+    },
+    "XXL": {
+      "collar_in": 17.5,
+      "collar_mm": 444.5
+    }
+  },
+  "unit_convention": "1 TMU = 0.0006 min = 0.036 s; 1 s = 27.78 TMU; 1 min = 1666.7 TMU",
+  "ip_statement": "Contains no predetermined-motion-time table data. No GSD codes, no MTM data-card values, no TMU-by-distance-class tables. Seam lengths are geometric properties of a garment pattern, derived from published finished-garment points of measure.",
+  "base_spec_provenance": "DERIVED: regular-fit classic men's woven dress shirt spec, reconciled against published finished-garment charts (mfgmerch.com shirt/t-shirt POM definitions: chest width = armhole seam to armhole seam, body length = shoulder top at neck to bottom hem; a laid-flat vendor chart giving M chest 96cm / shoulder 41cm / sleeve 61cm / length 67cm for SLIM fit was used as a lower bound and eased up to regular fit). Dress-shirt neck/sleeve labelling convention (e.g. 15.5/33 = 15.5in neck, 33in sleeve) per mfgmerch.com. Woven ease per techpacker.com (wovens need more ease than knits). NOT a single sourced table - a reconciled base spec.",
+  "points_of_measure_mm": {
+    "chest_half": {
+      "S": 520,
+      "M": 540,
+      "L": 560,
+      "XL": 585,
+      "XXL": 615
+    },
+    "body_len": {
+      "S": 760,
+      "M": 775,
+      "L": 790,
+      "XL": 805,
+      "XXL": 825
+    },
+    "across_sh": {
+      "S": 440,
+      "M": 455,
+      "L": 470,
+      "XL": 485,
+      "XXL": 505
+    },
+    "sleeve_cbn": {
+      "S": 825,
+      "M": 840,
+      "L": 855,
+      "XL": 870,
+      "XXL": 895
+    },
+    "sweep_half": {
+      "S": 540,
+      "M": 560,
+      "L": 580,
+      "XL": 605,
+      "XXL": 635
+    },
+    "armhole_c": {
+      "S": 520,
+      "M": 535,
+      "L": 550,
+      "XL": 570,
+      "XXL": 595
+    },
+    "cuff_len": {
+      "S": 230,
+      "M": 240,
+      "L": 245,
+      "XL": 255,
+      "XXL": 265
+    },
+    "cuff_ht": {
+      "S": 62,
+      "M": 62,
+      "L": 65,
+      "XL": 65,
+      "XXL": 68
+    }
+  },
+  "grade_rules": {
+    "chest_half": "+20mm/size (S-XL), +30mm to XXL  (= 40mm full-chest grade, trade standard)",
+    "body_len": "+15mm/size (S-XL), +20mm to XXL",
+    "across_sh": "+15mm/size (S-XL), +20mm to XXL",
+    "sleeve_cbn": "+15mm/size, tracks the 1/2-inch collar grade (dress shirts are labelled neck/sleeve)",
+    "sweep_half": "+20mm/size, tracks chest",
+    "armhole_c": "+15mm/size (S-XL), +25mm to XXL; scye grades slower than chest",
+    "cuff_len": "+10mm/size (approx. wrist grade)",
+    "cuff_ht": "+3mm every second size; style-driven, not a body grade"
+  },
+  "stitch_density_policy": {
+    "casual_shirt_blouse_spi": [
+      10,
+      14
+    ],
+    "default_assembly_spi": 12,
+    "default_fine_collar_cuff_spi": 14,
+    "source": "SOURCED (project context): casual shirts/blouses run 10-14 SPI; dresses/skirts 10-12."
+  },
+  "seam_operations": [
+    {
+      "component": "collar",
+      "operation": "Run-stitch collar (close top+under collar, 3 sides)",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 433.0,
+        "M": 445.7,
+        "L": 458.4,
+        "XL": 471.1,
+        "XXL": 496.5
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 433.0,
+        "M": 445.7,
+        "L": 458.4,
+        "XL": 471.1,
+        "XXL": 496.5
+      },
+      "spi": 14,
+      "curvature_class": "moderate",
+      "guidance_class": "seam_hidden",
+      "plies": 2,
+      "pivots": 2,
+      "scaling_rule": "= collar band length - 26mm (leaf neck edge) + 46mm for point/spread allowance; band scales with collar size",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Two sharp point pivots. 14 SPI: fine collar work sits at the top of the 10-14 SPI casual-shirt band."
+    },
+    {
+      "component": "collar",
+      "operation": "Topstitch/edge-stitch collar outer edge",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 433.0,
+        "M": 445.7,
+        "L": 458.4,
+        "XL": 471.1,
+        "XXL": 496.5
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 433.0,
+        "M": 445.7,
+        "L": 458.4,
+        "XL": 471.1,
+        "XXL": 496.5
+      },
+      "spi": 14,
+      "curvature_class": "moderate",
+      "guidance_class": "edgestitch_critical",
+      "plies": 3,
+      "pivots": 2,
+      "scaling_rule": "same path as run-stitch",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Tracking tolerance ~0.25mm dominates speed, not the machine."
+    },
+    {
+      "component": "collar_band",
+      "operation": "Attach band to collar leaf + close band",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 413.0,
+        "M": 425.7,
+        "L": 438.4,
+        "XL": 451.1,
+        "XXL": 476.5
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 413.0,
+        "M": 425.7,
+        "L": 438.4,
+        "XL": 451.1,
+        "XXL": 476.5
+      },
+      "spi": 14,
+      "curvature_class": "moderate",
+      "guidance_class": "seam_visible",
+      "plies": 3,
+      "pivots": 2,
+      "scaling_rule": "= neck circumference (collar size x 25.4) + 32mm button stand",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Curved at both ends; band ends are a 'very_tight' local feature the engine may segment separately."
+    },
+    {
+      "component": "collar_band",
+      "operation": "Attach collar band to neckline (set collar)",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 413.0,
+        "M": 425.7,
+        "L": 438.4,
+        "XL": 451.1,
+        "XXL": 476.5
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 413.0,
+        "M": 425.7,
+        "L": 438.4,
+        "XL": 451.1,
+        "XXL": 476.5
+      },
+      "spi": 14,
+      "curvature_class": "tight",
+      "guidance_class": "seam_visible",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= band length",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Tight neckline curve, high visibility, ease control required."
+    },
+    {
+      "component": "collar_band",
+      "operation": "Topstitch collar band",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 826.0,
+        "M": 851.4,
+        "L": 876.8,
+        "XL": 902.2,
+        "XXL": 953.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 826.0,
+        "M": 851.4,
+        "L": 876.8,
+        "XL": 902.2,
+        "XXL": 953.0
+      },
+      "spi": 14,
+      "curvature_class": "tight",
+      "guidance_class": "edgestitch_critical",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= 2 x band length (upper and lower edge)",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": ""
+    },
+    {
+      "component": "cuff",
+      "operation": "Run-stitch cuff (3 sides)",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 354,
+        "M": 364,
+        "L": 375,
+        "XL": 385,
+        "XXL": 401
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 708,
+        "M": 728,
+        "L": 750,
+        "XL": 770,
+        "XXL": 802
+      },
+      "spi": 14,
+      "curvature_class": "gentle",
+      "guidance_class": "seam_hidden",
+      "plies": 2,
+      "pivots": 2,
+      "scaling_rule": "= cuff_len + 2 x cuff_height",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Per cuff; count=2 per garment."
+    },
+    {
+      "component": "cuff",
+      "operation": "Topstitch cuff edge",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 354,
+        "M": 364,
+        "L": 375,
+        "XL": 385,
+        "XXL": 401
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 708,
+        "M": 728,
+        "L": 750,
+        "XL": 770,
+        "XXL": 802
+      },
+      "spi": 14,
+      "curvature_class": "gentle",
+      "guidance_class": "edgestitch_critical",
+      "plies": 3,
+      "pivots": 2,
+      "scaling_rule": "same path as run-stitch",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": ""
+    },
+    {
+      "component": "cuff",
+      "operation": "Attach cuff to sleeve",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 230,
+        "M": 240,
+        "L": 245,
+        "XL": 255,
+        "XXL": 265
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 460,
+        "M": 480,
+        "L": 490,
+        "XL": 510,
+        "XXL": 530
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "seam_visible",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= finished cuff long edge",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Sleeve is gathered/pleated into the cuff."
+    },
+    {
+      "component": "front_placket",
+      "operation": "Form + stitch front placket (button side)",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 760.0,
+        "M": 775.0,
+        "L": 790.0,
+        "XL": 805.0,
+        "XXL": 825.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 760.0,
+        "M": 775.0,
+        "L": 790.0,
+        "XL": 805.0,
+        "XXL": 825.0
+      },
+      "spi": 12,
+      "curvature_class": "straight",
+      "guidance_class": "mechanically_guided",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= front body length",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Folder-formed; long straight run, the fastest operation on the garment."
+    },
+    {
+      "component": "front_placket",
+      "operation": "Stitch buttonhole-side front edge / band",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 760.0,
+        "M": 775.0,
+        "L": 790.0,
+        "XL": 805.0,
+        "XXL": 825.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 760.0,
+        "M": 775.0,
+        "L": 790.0,
+        "XL": 805.0,
+        "XXL": 825.0
+      },
+      "spi": 12,
+      "curvature_class": "straight",
+      "guidance_class": "topstitch",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= front body length",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": ""
+    },
+    {
+      "component": "back_yoke",
+      "operation": "Join yoke to back (with pleats)",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 440.0,
+        "M": 455.0,
+        "L": 470.0,
+        "XL": 485.0,
+        "XXL": 505.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 440.0,
+        "M": 455.0,
+        "L": 470.0,
+        "XL": 485.0,
+        "XXL": 505.0
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "seam_hidden",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= across-shoulder width",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": ""
+    },
+    {
+      "component": "back_yoke",
+      "operation": "Close yoke at shoulder / attach fronts (both shoulders)",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 404.8,
+        "M": 418.6,
+        "L": 432.4,
+        "XL": 446.2,
+        "XXL": 464.6
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 809.6,
+        "M": 837.2,
+        "L": 864.8,
+        "XL": 892.4,
+        "XXL": 929.2
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "seam_hidden",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= 0.92 x across-shoulder (shoulder seam line is inboard of the shoulder point)",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": ""
+    },
+    {
+      "component": "back_yoke",
+      "operation": "Topstitch yoke seam",
+      "machine_class": "TNLS",
+      "path_length_mm": {
+        "S": 440.0,
+        "M": 455.0,
+        "L": 470.0,
+        "XL": 485.0,
+        "XXL": 505.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 440.0,
+        "M": 455.0,
+        "L": 470.0,
+        "XL": 485.0,
+        "XXL": 505.0
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "topstitch",
+      "plies": 4,
+      "pivots": 0,
+      "scaling_rule": "= across-shoulder width",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Twin-needle gives both rows in one pass."
+    },
+    {
+      "component": "sleeve",
+      "operation": "Sleeve inseam (underarm), felled or overlocked",
+      "machine_class": "FOA-401",
+      "path_length_mm": {
+        "S": 543.0,
+        "M": 550.5,
+        "L": 555.0,
+        "XL": 562.5,
+        "XXL": 574.5
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 1086.0,
+        "M": 1101.0,
+        "L": 1110.0,
+        "XL": 1125.0,
+        "XXL": 1149.0
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "mechanically_guided",
+      "plies": 2,
+      "pivots": 0,
+      "scaling_rule": "= sleeve_cbn - across_shoulder/2 - cuff_height (arm-scye to cuff along the underarm)",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "On a felled-seam line this runs continuous with the side seam on a feed-off-arm machine."
+    },
+    {
+      "component": "sleeve",
+      "operation": "Sleeve placket (gauntlet) set + topstitch",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 310.0,
+        "M": 310.0,
+        "L": 310.0,
+        "XL": 310.0,
+        "XXL": 310.0
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 620.0,
+        "M": 620.0,
+        "L": 620.0,
+        "XL": 620.0,
+        "XXL": 620.0
+      },
+      "spi": 12,
+      "curvature_class": "straight",
+      "guidance_class": "topstitch",
+      "plies": 3,
+      "pivots": 4,
+      "scaling_rule": "Style-driven, not body-graded: tower placket ~140mm long, stitch path ~310mm round both sides and the point",
+      "provenance": "ESTIMATE",
+      "notes": "Classic tower placket. Path estimated geometrically from a 140x25mm placket outline; verify against the factory's own placket pattern."
+    },
+    {
+      "component": "sleeve",
+      "operation": "Hem sleeve head / attach sleeve to armhole",
+      "machine_class": "SNLS-UBT",
+      "path_length_mm": {
+        "S": 520,
+        "M": 535,
+        "L": 550,
+        "XL": 570,
+        "XXL": 595
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 1040,
+        "M": 1070,
+        "L": 1100,
+        "XL": 1140,
+        "XXL": 1190
+      },
+      "spi": 12,
+      "curvature_class": "tight",
+      "guidance_class": "seam_visible",
+      "plies": 3,
+      "pivots": 0,
+      "scaling_rule": "= scye circumference",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Set-in sleeve, eased. Tight curvature throughout."
+    },
+    {
+      "component": "armhole",
+      "operation": "Close armhole seam felling / topstitch",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 520,
+        "M": 535,
+        "L": 550,
+        "XL": 570,
+        "XXL": 595
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 1040,
+        "M": 1070,
+        "L": 1100,
+        "XL": 1140,
+        "XXL": 1190
+      },
+      "spi": 12,
+      "curvature_class": "tight",
+      "guidance_class": "topstitch",
+      "plies": 4,
+      "pivots": 0,
+      "scaling_rule": "= scye circumference",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": ""
+    },
+    {
+      "component": "side_seam",
+      "operation": "Close side seam (felled or safety-stitch)",
+      "machine_class": "FOA-401",
+      "path_length_mm": {
+        "S": 500.0,
+        "M": 507.5,
+        "L": 515.0,
+        "XL": 520.0,
+        "XXL": 527.5
+      },
+      "count": 2,
+      "stitch_path_total_mm": {
+        "S": 1000.0,
+        "M": 1015.0,
+        "L": 1030.0,
+        "XL": 1040.0,
+        "XXL": 1055.0
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "mechanically_guided",
+      "plies": 2,
+      "pivots": 0,
+      "scaling_rule": "= body_length - scye_circumference/2 (underarm point to hem)",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Feed-off-arm runs side seam + sleeve inseam as one continuous tube seam."
+    },
+    {
+      "component": "bottom_hem",
+      "operation": "Hem bottom (folder, shirt-tail curve)",
+      "machine_class": "SNLS-HEM",
+      "path_length_mm": {
+        "S": 1080.0,
+        "M": 1120.0,
+        "L": 1160.0,
+        "XL": 1210.0,
+        "XXL": 1270.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 1080.0,
+        "M": 1120.0,
+        "L": 1160.0,
+        "XL": 1210.0,
+        "XXL": 1270.0
+      },
+      "spi": 12,
+      "curvature_class": "gentle",
+      "guidance_class": "mechanically_guided",
+      "plies": 2,
+      "pivots": 0,
+      "scaling_rule": "= 2 x half-sweep (full hem circumference)",
+      "provenance": "DERIVED_GEOMETRIC",
+      "notes": "Shirt-tail curve is 'gentle' over most of its length; the two side-seam radii are locally tighter."
+    },
+    {
+      "component": "pocket",
+      "operation": "Hem pocket top",
+      "machine_class": "SNLS-HEM",
+      "path_length_mm": {
+        "S": 125.0,
+        "M": 125.0,
+        "L": 125.0,
+        "XL": 125.0,
+        "XXL": 125.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 125.0,
+        "M": 125.0,
+        "L": 125.0,
+        "XL": 125.0,
+        "XXL": 125.0
+      },
+      "spi": 12,
+      "curvature_class": "straight",
+      "guidance_class": "mechanically_guided",
+      "plies": 2,
+      "pivots": 0,
+      "scaling_rule": "Style-driven: 125mm pocket width, constant across the size range on most shirt specs",
+      "provenance": "ESTIMATE",
+      "notes": "Pocket dimensions are a style choice; most makers do not grade the patch pocket."
+    },
+    {
+      "component": "pocket",
+      "operation": "Set pocket to front (3 sides + point)",
+      "machine_class": "SNLS-TOP",
+      "path_length_mm": {
+        "S": 365.0,
+        "M": 365.0,
+        "L": 365.0,
+        "XL": 365.0,
+        "XXL": 365.0
+      },
+      "count": 1,
+      "stitch_path_total_mm": {
+        "S": 365.0,
+        "M": 365.0,
+        "L": 365.0,
+        "XL": 365.0,
+        "XXL": 365.0
+      },
+      "spi": 12,
+      "curvature_class": "very_tight",
+      "guidance_class": "topstitch",
+      "plies": 3,
+      "pivots": 3,
+      "scaling_rule": "= 2 x pocket height (145) + width (125) - style-driven, ungraded",
+      "provenance": "ESTIMATE",
+      "notes": "Pointed-bottom patch pocket. Corners are pivots; the point is a very_tight local radius."
+    }
+  ],
+  "cycle_operations": [
+    {
+      "component": "front_placket",
+      "operation": "Buttonhole, front placket",
+      "machine_class": "BH-LS",
+      "count": {
+        "S": 6,
+        "M": 6,
+        "L": 7,
+        "XL": 7,
+        "XXL": 7
+      },
+      "stitches_each": 88,
+      "orientation": "vertical",
+      "spacing_mm": "~95-105mm pitch down the placket; scales with body length",
+      "provenance": "SOURCED (project context): a lockstitch buttonhole is ~85-90 stitches, sewn vertically. Count grades with body length.",
+      "notes": "Buttonhole length ~ button diameter + thickness; a 11-12mm shirt button gives a ~13mm cut."
+    },
+    {
+      "component": "cuff",
+      "operation": "Buttonhole, cuff (incl. adjustment)",
+      "machine_class": "BH-LS",
+      "count": {
+        "S": 4,
+        "M": 4,
+        "L": 4,
+        "XL": 4,
+        "XXL": 4
+      },
+      "stitches_each": 88,
+      "orientation": "horizontal",
+      "spacing_mm": "2 per cuff, ~25mm apart",
+      "provenance": "SOURCED (project context) for stitch count; count per trade practice.",
+      "notes": ""
+    },
+    {
+      "component": "collar_band",
+      "operation": "Buttonhole, collar band",
+      "machine_class": "BH-LS",
+      "count": {
+        "S": 1,
+        "M": 1,
+        "L": 1,
+        "XL": 1,
+        "XXL": 1
+      },
+      "stitches_each": 88,
+      "orientation": "horizontal",
+      "spacing_mm": "1 at band overlap",
+      "provenance": "SOURCED (project context) for stitch count.",
+      "notes": ""
+    },
+    {
+      "component": "sleeve_placket",
+      "operation": "Buttonhole, gauntlet",
+      "machine_class": "BH-LS",
+      "count": {
+        "S": 2,
+        "M": 2,
+        "L": 2,
+        "XL": 2,
+        "XXL": 2
+      },
+      "stitches_each": 88,
+      "orientation": "vertical",
+      "spacing_mm": "1 per placket tower",
+      "provenance": "SOURCED (project context) for stitch count.",
+      "notes": "Omitted on some specs; a style flag in the engine."
+    },
+    {
+      "component": "all",
+      "operation": "Button sew (flat 2/4-hole)",
+      "machine_class": "BTN-SEW",
+      "count": {
+        "S": 13,
+        "M": 13,
+        "L": 14,
+        "XL": 14,
+        "XXL": 14
+      },
+      "stitches_each": 16,
+      "orientation": "n/a",
+      "spacing_mm": "one button per buttonhole",
+      "provenance": "ESTIMATE: 16 stitches for a 4-hole cross-stitch button cycle. Machine-cycle count, verify against the factory's button-sew program.",
+      "notes": "Runs at 1,800 rpm rated (Juki MB-1800 catalogue)."
+    },
+    {
+      "component": "pocket",
+      "operation": "Bartack, pocket mouth corners",
+      "machine_class": "BTK",
+      "count": {
+        "S": 2,
+        "M": 2,
+        "L": 2,
+        "XL": 2,
+        "XXL": 2
+      },
+      "stitches_each": 42,
+      "orientation": "n/a",
+      "spacing_mm": "one each side of the pocket mouth",
+      "provenance": "ESTIMATE: 42 stitches for a standard short bartack. Verify against the factory's tacker program.",
+      "notes": "Juki LK-1900B rated 3,200sti/min."
+    }
+  ],
+  "buttonhole_counts_by_component": {
+    "front_placket": {
+      "S": 6,
+      "M": 6,
+      "L": 7,
+      "XL": 7,
+      "XXL": 7
+    },
+    "cuff": {
+      "S": 4,
+      "M": 4,
+      "L": 4,
+      "XL": 4,
+      "XXL": 4
+    },
+    "collar_band": {
+      "S": 1,
+      "M": 1,
+      "L": 1,
+      "XL": 1,
+      "XXL": 1
+    },
+    "sleeve_placket": {
+      "S": 2,
+      "M": 2,
+      "L": 2,
+      "XL": 2,
+      "XXL": 2
+    },
+    "pocket_flap": {
+      "S": 0,
+      "M": 0,
+      "L": 0,
+      "XL": 0,
+      "XXL": 0
+    }
+  },
+  "buttonhole_total_by_size": {
+    "S": 13,
+    "M": 13,
+    "L": 14,
+    "XL": 14,
+    "XXL": 14
+  },
+  "button_counts_by_component": {
+    "front_placket": {
+      "S": 6,
+      "M": 6,
+      "L": 7,
+      "XL": 7,
+      "XXL": 7
+    },
+    "cuff": {
+      "S": 4,
+      "M": 4,
+      "L": 4,
+      "XL": 4,
+      "XXL": 4
+    },
+    "collar_band": {
+      "S": 1,
+      "M": 1,
+      "L": 1,
+      "XL": 1,
+      "XXL": 1
+    },
+    "sleeve_placket": {
+      "S": 2,
+      "M": 2,
+      "L": 2,
+      "XL": 2,
+      "XXL": 2
+    },
+    "pocket_flap": {
+      "S": 0,
+      "M": 0,
+      "L": 0,
+      "XL": 0,
+      "XXL": 0
+    }
+  },
+  "provenance_legend": {
+    "SOURCED": "Read from a cited published source or the project's grounded reference points.",
+    "DERIVED_GEOMETRIC": "Computed from the finished-garment points of measure by an explicit stated rule. Soft: depends on the base spec.",
+    "ESTIMATE": "Engineering judgement, no source. Softest class - calibrate first."
+  },
+  "machine_time_crosscheck": {
+    "size": "M",
+    "note": "Machine time only. Excludes handling (pillar 2) and allowances (pillar 3). Computed with effective_spm.py default ESTIMATE coefficients.",
+    "seam_machine_time_min": 3.732,
+    "cycle_machine_time_min": 1.234,
+    "total_machine_time_min": 4.966,
+    "total_machine_time_tmu": 8277.0,
+    "total_stitch_path_mm": 14313.4
+  }
+}

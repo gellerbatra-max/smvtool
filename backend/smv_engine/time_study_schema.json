@@ -1,0 +1,96 @@
+{
+  "spec": {
+    "name": "SMV time-study ingestion schema",
+    "version": "1.0",
+    "purpose": "Define the record shape a factory (or a synthetic generator) must produce so that calibration_fit.py can refit the taxonomy's calibration-pending coefficients. Each record is one *continuously-timed observation* of a single engine element, seam segment, or full operation, captured by direct time study (stopwatch / MOST-style video analysis) or a work-sampling system.",
+    "design_principles": [
+      "One row = one timed instance of one element/seam/operation occurrence, never a pre-averaged value -- averaging belongs in the fitting step, not the ingestion step, so residual variance is preserved for the diagnostics report.",
+      "Every row carries the exact parameter values the engine itself needs to recompute its predicted time for that instance (echoing compute_element's/assemble_operation's own **params kwargs) -- calibration is a regression of observed_s against the engine's own predictors, not against a separate hand-built feature set.",
+      "The schema is hierarchical to match the taxonomy's own hierarchy of calibration-pending scope: engine-level constants (a_steer, b_arm, ...) are shared across all factories; factory-level parameters (PHI reference fabric B_ref/MIU_ref/t_ref_mm, pace v_guide) are shared across operators within one factory; operator-level (Gamma_skill) varies per person. A study batch declares which scope it can identify.",
+      "Provenance and rater/method metadata travel with every row so the diagnostics report can flag studies with too few reps, non-standard-performance raters, or fabric/machine combinations outside the taxonomy's reference set.",
+      "Nothing is silently dropped: rows failing schema validation are rejected with a reason, not coerced."
+    ]
+  },
+  "conventions": {
+    "time_units": "seconds, continuous (not TMU) -- convert to TMU only for reporting, never for fitting",
+    "identifiers": "element codes and machine/attachment codes MUST match element_taxonomy.json / machine_classes.csv exactly; the loader validates against those files at ingestion time and rejects unknown codes",
+    "missing_values": "use JSON null, never a sentinel number (-1, 999, etc.)",
+    "one_file_per_batch": "a 'study_batch' groups all rows collected under one method/rater/date-range; batches are the unit of provenance and inter-rater comparison"
+  },
+  "study_batch": {
+    "description": "Top-level container. One JSON file (or one row-group in a long-format CSV/Parquet loader) is one study_batch.",
+    "fields": [
+      {"name": "batch_id", "type": "string", "required": true, "description": "Unique batch identifier, e.g. 'FACT-A_2026-08_cutting-line-1'."},
+      {"name": "factory_id", "type": "string", "required": true, "description": "Which factory/site this batch was collected at. Determines factory-level scope (PHI reference fabric, pace)."},
+      {"name": "method", "type": "string", "required": true, "domain": ["STOPWATCH_CONTINUOUS", "STOPWATCH_SNAPBACK", "VIDEO_FRAME", "MOST_PREDETERMINED", "WORK_SAMPLING", "SYNTHETIC"], "description": "Time-study method. SYNTHETIC marks generator-produced rows (e.g. this project's own diagnostics demo) so they can be excluded from any real-data fit."},
+      {"name": "rater_id", "type": "string", "required": true, "description": "Analyst or system that performed the timing/pace-rating."},
+      {"name": "rater_qualification", "type": "string", "required": false, "domain": ["CERTIFIED_IE", "TRAINED_SUPERVISOR", "UNTRAINED", "AUTOMATED"], "description": "Used to weight or flag batches in diagnostics; automated/video-derived batches typically have zero pace-rating subjectivity but may have segmentation error instead."},
+      {"name": "date_range", "type": "[string, string]", "required": true, "description": "[start_date, end_date] ISO-8601."},
+      {"name": "performance_rating_applied", "type": "boolean", "required": true, "description": "Whether observed_s values in this batch have already been normalized to standard pace (rating factor applied) by the collector. If false, calibration_fit.py applies pace_rating_pct itself per row."},
+      {"name": "notes", "type": "string", "required": false},
+      {"name": "observations", "type": "array<observation>", "required": true}
+    ]
+  },
+  "observation": {
+    "description": "One timed instance. Exactly one of element_observation / seam_observation / cycle_observation / operation_observation must be present, matching the scope of what was timed.",
+    "fields": [
+      {"name": "observation_id", "type": "string", "required": true},
+      {"name": "operator_id", "type": "string", "required": true, "description": "Pseudonymous operator identifier. Required even for element-level rows so Gamma_skill can eventually be fit per operator; use a shared placeholder (e.g. 'UNSPECIFIED') only for batches that cannot identify the operator."},
+      {"name": "pace_rating_pct", "type": "number", "required": false, "domain": [50, 150], "description": "Analyst's pace rating (100 = standard performance) for this specific instance, if performance_rating_applied is false at the batch level and rating was done per-observation rather than per-batch."},
+      {"name": "n_reps_averaged", "type": "integer", "required": true, "default": 1, "description": "Must be 1 for a single continuously-timed instance (the design principle above). Values >1 are accepted for legacy pre-averaged data but are down-weighted in fitting and flagged in diagnostics."},
+      {"name": "observed_s", "type": "number", "required": true, "domain": [0, null], "description": "The measured elapsed time in seconds for exactly the scope named below (one element occurrence / one seam pass / one cycle / one full operation) -- standard-performance-normalized if performance_rating_applied."},
+      {"name": "element_observation", "type": "object|null", "description": "Present when this row times a single handling element occurrence.", "schema": {
+        "element_code": {"type": "string", "description": "Must match a code in element_taxonomy.json elements[].code (e.g. 'HAM', 'HGD')."},
+        "params": {"type": "object", "description": "The exact **params that would be passed to Taxonomy.compute_element(element_code, **params) to predict this instance -- e.g. {'distance_cm': 25.0, 'plies': 2, 'match_precision': 'P2', 'fabric_class': 'REF_POPLIN'}. Any parameter accepted by the element's signature and not supplied falls back to the taxonomy default, exactly as compute_element does; the loader records which fields were defaulted for the diagnostics report, since defaulted fields cannot be used to identify parameter sensitivity from this row."}
+      }},
+      {"name": "seam_observation", "type": "object|null", "description": "Present when this row times one pass along a stitched seam (a t_guide- or t_machine-dominated instance).", "schema": {
+        "machine_class": {"type": "string", "description": "Must match machine_classes.csv record_type=='machine' code."},
+        "path_length_mm": {"type": "number"},
+        "spi": {"type": "number"},
+        "plies": {"type": "integer"},
+        "pivots": {"type": "integer", "default": 0},
+        "curvature_class": {"type": "string", "domain": ["straight", "gentle", "moderate", "tight"]},
+        "guidance_class": {"type": "string", "domain": ["mechanically_guided", "seam_hidden", "seam_visible", "topstitch", "edgestitch_critical"]},
+        "fabric_class": {"type": "string", "default": "REF_POPLIN"},
+        "binding_side_hint": {"type": "string|null", "domain": ["machine", "guide", null], "description": "Optional analyst judgment of which pillar was visibly binding; used only as a diagnostics cross-check against the engine's own MAX() selection, never fed into the fit directly."}
+      }},
+      {"name": "cycle_observation", "type": "object|null", "description": "Present when this row times one cycle-machine program run (buttonhole/bartack/button-sew).", "schema": {
+        "machine_class": {"type": "string"},
+        "stitches": {"type": "integer"}
+      }},
+      {"name": "operation_observation", "type": "object|null", "description": "Present when this row times a full multi-step operation end-to-end (coarsest grain; informs BT_op/ST_op-level reconciliation and Gamma_skill, not individual coefficients).", "schema": {
+        "operation_name": {"type": "string"},
+        "engine_step_sequence": {"type": "array", "description": "The same steps= list shape smv_assembly.Operation takes, so the loader can compute the engine's predicted BT_op_s for direct comparison to observed_s."},
+        "bundle_size": {"type": "integer|null"}
+      }},
+      {"name": "environment", "type": "object", "required": false, "schema": {
+        "fabric_class_actual": {"type": "string|null", "description": "If different from the reference fabric assumed in params/fabric_class, e.g. the factory's own denim vs. REF_POPLIN -- flags a fabric-difficulty PHI extrapolation."},
+        "workstation_notes": {"type": "string|null"}
+      }}
+    ]
+  },
+  "calibration_scope_map": {
+    "description": "Which observation kind identifies which calibration-pending symbol/element, used by calibration_fit.py to route rows to the right regression and by the coverage report to flag symbols with zero supporting observations.",
+    "routes": [
+      {"observation_kind": "element_observation", "phase_types_informed": ["point", "grasp", "steer", "fixed", "cognitive"], "example_symbols": ["a_fin", "b_fin", "a_wri", "b_wri", "D_trunk_mm", "c_lean", "g_0", "g_ply", "gamma_ply", "g_bundle", "kappa_m", "t_look", "phi_limp", "phi_slip", "phi_bulk", "Phi_min", "Phi_max"], "notes": "The primary route for identifying per-phase-type coefficients; distinct element_code + varied params (esp. distance/plies/mass) needed to separate intercept from slope terms."},
+      {"observation_kind": "seam_observation", "phase_types_informed": ["steer"], "example_symbols": ["a_steer", "b_steer", "k_R", "k_theta"], "notes": "Also cross-checked against machine_time.py's pure_machine_time_seam so a seam row can attribute variance to the guide pillar specifically when binding_side_hint == 'guide' or the engine's own MAX() selects guide."},
+      {"observation_kind": "cycle_observation", "phase_types_informed": [], "example_symbols": [], "notes": "Currently used for machine_time.py's cycle-time model validation, not for taxonomy coefficient fitting -- cycle machines run a taught program, not an operator steering law."},
+      {"observation_kind": "operation_observation", "phase_types_informed": [], "example_symbols": ["Gamma_skill", "B_ref", "MIU_ref", "t_ref_mm"], "notes": "Coarse-grained; used to fit operator-level Gamma_skill (given already-fit engine constants) and to detect factory-level PHI reference-fabric mis-specification from aggregate residuals when element-level data is too sparse."}
+    ]
+  },
+  "validation": {
+    "on_ingest": [
+      "element_code / machine_class / attachment codes exist in element_taxonomy.json / machine_classes.csv",
+      "params keys are a subset of the element's declared parameter names (mirrors handling_time.Taxonomy._resolve_params's unknown-parameter check)",
+      "params values respect each parameter's declared domain (mirrors the domain-bound check added to _resolve_params)",
+      "observed_s > 0",
+      "exactly one of element_observation/seam_observation/cycle_observation/operation_observation is non-null",
+      "pace_rating_pct, if present, lies in [50, 150]; rows outside this range are rejected, not clipped"
+    ],
+    "on_fit": [
+      "n_reps_averaged == 1 rows are weighted 1.0; n_reps_averaged > 1 rows are weighted 1/n_reps_averaged (a pre-averaged observation contributes to the mean but not to residual-variance estimation the way a raw rep would)",
+      "SYNTHETIC-method batches are excluded from any fit against real coefficients by default; calibration_fit.py requires an explicit include_synthetic=True to mix them in",
+      "a coefficient is only reported as fit (not left at its taxonomy default) once its minimum-observation-count threshold is met -- see calibration_fit.py MIN_OBS_PER_COEFFICIENT"
+    ]
+  }
+}

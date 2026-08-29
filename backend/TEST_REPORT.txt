@@ -1,0 +1,43 @@
+=== Vendored SMV engine test suite (unmodified, from handoff bundle) ===
+cd backend/smv_engine && PYTHONPATH=. pytest test_engine.py test_calibration.py test_shirt_library.py -q
+..........                                                               [100%]
+=============================== warnings summary ===============================
+test_calibration.py::TestCalibrateAllEndToEnd::test_runs_without_error_and_shapes_are_sane
+test_calibration.py::TestCalibrateAllEndToEnd::test_coverage_report_flags_insufficient_symbols
+test_calibration.py::TestCalibrateAllEndToEnd::test_notes_report_synthetic_provenance
+test_calibration.py::TestCalibrateAllEndToEnd::test_operator_gamma_keys_scoped_by_factory
+test_calibration.py::TestDiagnostics::test_residual_table_covers_all_rows
+test_calibration.py::TestDiagnostics::test_error_summary_has_expected_columns
+test_calibration.py::TestDiagnostics::test_fit_recovers_low_error_on_own_synthetic_data
+test_calibration.py::TestDiagnostics::test_diagnostics_figure_renders
+  /Users/raveenl/.claude-science/conda/envs/smv/lib/python3.13/site-packages/statsmodels/regression/mixed_linear_model.py:2237: ConvergenceWarning: The MLE may be on the boundary of the parameter space.
+    warnings.warn(msg, ConvergenceWarning)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+82 passed, 8 warnings in 18.53s
+
+=== Backend application test suite (SQLite fallback -- see SCHEMA.md) ===
+cd backend && PYTHONPATH=. pytest tests/ -v
+tests/test_audit.py::test_create_style_writes_one_change_log_row PASSED  [  4%]
+tests/test_audit.py::test_update_style_writes_one_row_per_changed_field PASSED [  9%]
+tests/test_audit.py::test_noop_update_writes_no_change_log_row PASSED    [ 13%]
+tests/test_audit.py::test_delete_style_writes_one_change_log_row PASSED  [ 18%]
+tests/test_audit.py::test_operation_writes_produce_change_log_rows PASSED [ 22%]
+tests/test_audit.py::test_allowance_policy_version_bump_writes_change_log PASSED [ 27%]
+tests/test_auth.py::test_login_success_and_failure PASSED                [ 31%]
+tests/test_auth.py::test_unauthenticated_request_rejected PASSED         [ 36%]
+tests/test_auth.py::test_viewer_cannot_create_style PASSED               [ 40%]
+tests/test_auth.py::test_viewer_cannot_add_operation PASSED              [ 45%]
+tests/test_auth.py::test_viewer_can_read PASSED                          [ 50%]
+tests/test_auth.py::test_viewer_cannot_compute PASSED                    [ 54%]
+tests/test_auth.py::test_engineer_cannot_manage_users PASSED             [ 59%]
+tests/test_auth.py::test_admin_can_manage_users PASSED                   [ 63%]
+tests/test_auth.py::test_engineer_cannot_create_allowance_policy_version PASSED [ 68%]
+tests/test_compute_regression.py::test_api_seeded_compute_matches_direct_engine_call PASSED [ 72%]
+tests/test_compute_regression.py::test_worked_example_armhole_seam_matches_direct_engine_and_report PASSED [ 77%]
+tests/test_compute_regression.py::test_api_compute_matches_worked_example_via_single_operation_style PASSED [ 81%]
+tests/test_crud.py::test_create_get_update_delete_style PASSED           [ 86%]
+tests/test_crud.py::test_add_edit_delete_operation PASSED                [ 90%]
+tests/test_crud.py::test_seed_from_library PASSED                        [ 95%]
+tests/test_crud.py::test_library_browse_and_bulletin PASSED              [100%]
+======================== 22 passed, 1 warning in 16.31s ========================

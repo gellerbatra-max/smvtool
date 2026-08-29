@@ -1,0 +1,28 @@
+operation,workstation
+"collar: Run-stitch collar (close top+under collar, 3 sides) (size M)",1
+collar: Topstitch/edge-stitch collar outer edge (size M),1
+collar_band: Attach band to collar leaf + close band (size M),1
+collar_band: Attach collar band to neckline (set collar) (size M),2
+collar_band: Topstitch collar band (size M),3
+cuff: Run-stitch cuff (3 sides) (size M),4
+cuff: Topstitch cuff edge (size M),4
+cuff: Attach cuff to sleeve (size M),5
+front_placket: Form + stitch front placket (button side) (size M),5
+front_placket: Stitch buttonhole-side front edge / band (size M),5
+back_yoke: Join yoke to back (with pleats) (size M),6
+back_yoke: Close yoke at shoulder / attach fronts (both shoulders) (size M),6
+back_yoke: Topstitch yoke seam (size M),6
+"sleeve: Sleeve inseam (underarm), felled or overlocked (size M)",6
+sleeve: Sleeve placket (gauntlet) set + topstitch (size M),7
+sleeve: Hem sleeve head / attach sleeve to armhole (size M),7
+armhole: Close armhole seam felling / topstitch (size M),8
+side_seam: Close side seam (felled or safety-stitch) (size M),9
+"bottom_hem: Hem bottom (folder, shirt-tail curve) (size M)",9
+pocket: Hem pocket top (size M),9
+pocket: Set pocket to front (3 sides + point) (size M),9
+"front_placket: Buttonhole, front placket (size M)",10
+"cuff: Buttonhole, cuff (incl. adjustment) (size M)",10
+"collar_band: Buttonhole, collar band (size M)",10
+"sleeve_placket: Buttonhole, gauntlet (size M)",10
+all: Button sew (flat 2/4-hole) (size M),10
+"pocket: Bartack, pocket mouth corners (size M)",10
