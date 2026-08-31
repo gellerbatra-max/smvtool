@@ -5,11 +5,12 @@ predetermined-motion-time software the user's apparel factory currently uses to 
 Standard Minute Values (SMV) for garment operations. Built as an IP-clean, computed
 engine (no licensed GSD/MTM tables anywhere) rather than a lookup-table clone.
 
-**GitHub repo:** https://github.com/gellerbatra-max/smvtool (a GitHub credential is
-required to push further commits — see "Credentials" below)
-**Latest commit:** `06fedd3` ("Add React frontend (Vite + TypeScript) - source only, incomplete")
-**Commit history:** `6fa5e23` (engine core) → `628b474` (backend + analytics + review fixes)
-→ `06fedd3` (frontend, incomplete)
+**GitHub repo:** https://github.com/gellerbatra-max/smvtool
+**Commit history:** `6fa5e23` (engine core) → `628b474` (backend + analytics) →
+`06fedd3` (frontend, initially incomplete) → `a02a8cf` (frontend fixed: missing
+`app.css`, Vitest suite added) → `4c01542` (two Postgres-only bugs found + fixed by
+actually running against a live Postgres instance) → `e62b3ad` (CI workflow, all 5
+jobs green) → **current** (Docker Compose deployment — see "How to run" below).
 
 ## Architecture (as decided with the user)
 
@@ -23,48 +24,65 @@ Three pillars, computed rather than looked up:
 3. **Allowances** — ILO-published ranges, editable per-factory policy
    (`allowance.py`, `allowance_policy.json`).
 
-Application layer decisions: **PostgreSQL** (tested against SQLite in this sandbox —
-disclosed limitation, see below) + **FastAPI** backend, **React SPA** (Vite +
-TypeScript) frontend.
+Application layer: **PostgreSQL** + **FastAPI** backend, **React SPA** (Vite +
+TypeScript) frontend, **Docker Compose** ties all three together.
 
 ## Current status by component
 
 | Component | Status | Tests |
 |---|---|---|
-| Calculation engine (3 pillars + assembly) | ✅ Complete | 35/35 |
-| Calibration module (hierarchical coefficient fitting) | ✅ Complete, validated only on synthetic data | +27 (62 total) |
-| Woven-shirt operation library (CLASSIC/SHORT_SLEEVE/BLOUSE_COLLARLESS, 5 sizes) | ✅ Complete | +20 (82 total) |
-| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, tested against SQLite **and live Postgres** — see below | 34/34 (both backends) |
+| Calculation engine (3 pillars + assembly) | ✅ Complete | 82/82 |
+| Calibration module (hierarchical coefficient fitting) | ✅ Complete, validated only on synthetic data — see limitations | included above |
+| Woven-shirt operation library (CLASSIC/SHORT_SLEEVE/BLOUSE_COLLARLESS, 5 sizes) | ✅ Complete | included above |
+| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 34/34 (each dialect) |
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
 | Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 34 |
-| **Frontend (React SPA)** | ⚠️ **Source written, UNVERIFIED — see below** | **0 (tests/ is empty)** |
-| End-to-end validation (UI → API → DB) | ❌ Not done — blocked on frontend | — |
-| Deployment guide | ❌ Not written — blocked on frontend | — |
+| Frontend (React SPA) | ✅ Builds clean, type-checks clean, tested | 21/21 |
+| End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP against both SQLite and Postgres backends | — |
+| CI (GitHub Actions) | ✅ All 5 jobs green on every push — engine, analytics, backend×2 dialects, frontend | — |
+| Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend | — |
 
-## ⚠️ The one thing you need to know before doing anything else
+**Total: 254 tests, all independently re-run and passing, 0 failing.**
 
-The Frontend track (a delegated sub-agent) wrote a substantial, apparently complete
-React app — API client, auth, all the pages described in the plan, export utilities —
-but **stalled partway through** (45+ minutes with no new activity, almost certainly
-stuck inside a long-running `npm install`/`npm run build`/`npm test` command) and had
-to be force-stopped to recover its output. As a result:
+## What changed most recently
 
-- **The frontend has never been built, run, or tested.** `npx tsc --noEmit` / `npm run
-  build` / `npm run dev` have not been executed successfully against this code — it may
-  have compile errors.
-- **`frontend/tests/` is empty.** No Vitest/React-Testing-Library tests exist despite
-  the plan asking for them.
-- **It has never talked to the real backend.** No login → create style → seed from
-  library → compute → view bulletin flow has been exercised end-to-end.
-- `node_modules/` was deliberately excluded from git (regenerable, `npm install`
-  restores it exactly from `package-lock.json`).
+Everything above marked ✅ that wasn't true as of `06fedd3` got there across a few
+follow-on sessions, each one actually verifying something rather than trusting the
+prior write-up:
 
-**Your first move in a new session should be:** `cd frontend && npm install && npx tsc
--b` to see what breaks, fix it, then run the backend locally (see below) and walk the
-one real user flow (login → seed CLASSIC/M style → compute → view bulletin → run a
-what-if) by hand before trusting anything else about it.
+- **Frontend was fixed** (`a02a8cf`): a missing `app.css` broke the build, plus a
+  21-test Vitest suite was added (apiClient, ProtectedRoute/RequireRole,
+  CalibrationBadge, LoginPage, a full-App integration test).
+- **Postgres was actually tested live** (`4c01542`) — the original sandbox this
+  project was built in couldn't start a real Postgres server at all (`shmget EPERM`);
+  a plain local install elsewhere could. That live run found and fixed **two real
+  Postgres-only bugs** SQLite's test suite structurally could not catch: the initial
+  migration's `downgrade()` never dropped the Postgres `user_role` enum type, and
+  `DELETE /styles/{id}` hit a `ForeignKeyViolation` on any style with change-log
+  history (SQLite doesn't enforce foreign keys by default, so this had silently
+  "worked" the whole time under test). Full detail in `backend/SCHEMA.md`.
+- **CI added** (`e62b3ad`): all 254 tests now re-run on every push, including a real
+  `postgres:16` service container — not just SQLite.
+- **Docker Compose added**: `db` + `backend` (runs `alembic upgrade head` on
+  container start) + `frontend` (nginx-served static build), wired together with a
+  required `.env` so no service can accidentally boot on dev-default secrets.
 
-## How to run the backend locally
+## How to run the whole stack (Docker Compose)
+
+```bash
+cp .env.example .env   # then fill in real values — POSTGRES_PASSWORD, SMV_JWT_SECRET,
+                        # SMV_BOOTSTRAP_ADMIN_PASSWORD; compose refuses to start without them
+docker compose up --build
+# frontend: http://localhost:5173   backend: http://localhost:8000/docs
+```
+
+Three services: `db` (Postgres 16, named volume for persistence), `backend`
+(runs `alembic upgrade head` on container start, then FastAPI), `frontend`
+(Vite build served via nginx, SPA routing configured). See
+`docker-compose.yml` / `.env.example` / `backend/Dockerfile` /
+`frontend/Dockerfile`.
+
+## How to run the backend locally (without Docker)
 
 ```bash
 cd backend
@@ -125,10 +143,11 @@ pytest tests/ -q` (83/83 passing).
 
 ## Credentials / access needed to continue
 
-- **GitHub**: a credential named "GitHub" was configured for this project (Customize →
-  Credentials) and used via `os.environ["GITHUB_TOKEN"]` to clone/push
-  `gellerbatra-max/smvtool`. If starting fresh on a different account, this credential
-  will need to be re-added, or the user can push manually from a local clone.
+- **GitHub**: push access to `gellerbatra-max/smvtool` is required to land further
+  commits. Whether that's available depends entirely on the environment a given
+  session is running in (a configured credential, an authenticated `git` credential
+  helper, etc.) — it is not something this document can promise session to session.
+  If push fails, the user can always push manually from a local clone.
 - **Local files**: the user also granted host access to
   `/Users/raveenl/Documents/Claude Code oxaam/SMV tool/smvtool/` (read-write) — an
   earlier, now-stale copy of just the engine bundle lives there (pre-application-layer;
@@ -142,6 +161,8 @@ pytest tests/ -q` (83/83 passing).
 smvtool/
 ├── HANDOFF.md                     <- this file
 ├── README_HANDOFF.md              <- engine-only handoff notes (superseded by this file for overall status)
+├── docker-compose.yml, .env.example   <- whole-stack deployment (db + backend + frontend)
+├── .github/workflows/ci.yml       <- all 254 tests re-run on every push (5 jobs)
 ├── *.py, *.json, *.csv, *.md      <- the calculation engine (repo root = engine bundle)
 │                                     handling_time.py / machine_time.py / effective_spm.py /
 │                                     allowance.py / smv_assembly.py / shirt_library.py /
@@ -152,32 +173,35 @@ smvtool/
 │   ├── line_balancing.py, costing.py, what_if.py, engine_loader.py
 │   ├── INTEGRATION.md             <- how a backend should call this module
 │   └── tests/
-├── backend/                       <- FastAPI application (34 tests)
+├── backend/                       <- FastAPI application (34 tests, both SQLite & Postgres)
+│   ├── Dockerfile, docker-entrypoint.sh   <- runs `alembic upgrade head` before uvicorn
 │   ├── app/
 │   │   ├── main.py, models.py, schemas.py, auth.py, audit.py, engine_bridge.py
 │   │   ├── analytics/             <- copy of analytics/ wired in via analytics_router.py
 │   │   └── routers/               <- auth, users, styles, library, calibration, allowance, analytics
 │   ├── smv_engine/                <- VENDORED frozen copy of the root engine (see engine_bridge.py)
-│   ├── migrations/                <- Alembic
-│   ├── SCHEMA.md                  <- schema + design decisions + Postgres/SQLite disclosure
-│   └── tests/
-└── frontend/                      <- React SPA — SEE WARNING ABOVE, unverified
+│   ├── migrations/                <- Alembic (verified against live Postgres, see SCHEMA.md)
+│   ├── SCHEMA.md                  <- schema + design decisions + Postgres/SQLite verification log
+│   └── tests/                     <- conftest.py supports TEST_DATABASE_URL for Postgres runs
+└── frontend/                      <- React SPA, builds clean, 21/21 tests passing
+    ├── Dockerfile, nginx.conf     <- multi-stage build, served static via nginx
     ├── src/{api,auth,components,pages,lib}/
-    └── tests/                     <- EMPTY
+    └── tests/                     <- apiClient, ProtectedRoute, CalibrationBadge, LoginPage, App integration
 ```
 
 ## Suggested next steps, in order
 
-1. `cd frontend && npm install` — see if it even installs cleanly from the committed
-   `package-lock.json`.
-2. `npx tsc -b` — find and fix any TypeScript errors.
-3. `npm run dev` against a locally running backend (see above) — walk the login → seed
-   style → compute → bulletin → what-if flow by hand.
-4. Write the Vitest/RTL test suite the plan asked for (component tests + at least one
-   integration test against a real running backend).
-5. Only then: end-to-end validation, deployment guide (Docker Compose for
-   Postgres+FastAPI+React is the natural shape), and a real Postgres test run.
-6. Separately, whenever the user has floor access: start the real factory time-study
-   campaign per `engine_phase1_report.md` §5 — this is the actual bottleneck on the
-   engine being trustworthy for payroll-grade numbers, independent of the application
-   layer's completeness.
+1. **Expand frontend test coverage.** The current 21 tests cover the API client, auth
+   guarding, one page, and one integration smoke test — not every page
+   (StyleEditorPage, BulletinPage, AnalyticsPage, LibraryPage don't have dedicated
+   component tests yet).
+2. **Decide on a LICENSE.** The project's entire premise is being IP-clean; an
+   explicit license (even a private/proprietary one) closes that loop formally.
+3. **Harden default-secret behavior in the non-Docker path.** `docker-compose.yml`
+   already refuses to start without real secrets; running the backend directly with
+   `uvicorn` still only logs a warning if `SMV_JWT_SECRET`/
+   `SMV_BOOTSTRAP_ADMIN_PASSWORD` are left on their dev defaults.
+4. **The real factory time-study campaign**, whenever the user has floor access — per
+   `engine_phase1_report.md` §5. This is the actual bottleneck on the engine being
+   trustworthy for payroll-grade numbers, independent of the application layer's
+   completeness, which is otherwise in good shape.

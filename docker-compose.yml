@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-smv}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-smvtool}
+    volumes:
+      - smv_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smv}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      SMV_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-smv}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-smvtool}
+      SMV_JWT_SECRET: ${SMV_JWT_SECRET:?set SMV_JWT_SECRET in .env -- do not deploy on the dev default}
+      SMV_BOOTSTRAP_ADMIN_USER: ${SMV_BOOTSTRAP_ADMIN_USER:-admin}
+      SMV_BOOTSTRAP_ADMIN_PASSWORD: ${SMV_BOOTSTRAP_ADMIN_PASSWORD:?set SMV_BOOTSTRAP_ADMIN_PASSWORD in .env -- do not deploy on the dev default}
+      SMV_CORS_ORIGINS: ${SMV_CORS_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  smv_postgres_data:
