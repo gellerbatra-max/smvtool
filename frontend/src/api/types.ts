@@ -200,6 +200,22 @@ export interface LibraryCatalog {
   cycle_operations: string[];
 }
 
+export interface LibraryBulletinOperation {
+  // Passthrough of smv_assembly.assemble_operation()'s return dict, not a
+  // dedicated Pydantic schema on the backend -- keys confirmed against a
+  // live response, not guessed (see the "operation" vs "operation_name"/
+  // "name" bug this replaced).
+  operation: string;
+  bundle_size: number;
+  allowance_profile: string;
+  BT_op_s: number;
+  ST_op_s: number;
+  BT_op_min: number;
+  ST_op_min: number;
+  no_double_count_warnings: string[];
+  steps: unknown[];
+}
+
 export interface LibraryBulletin {
   size: string;
   variant: string;
@@ -208,7 +224,7 @@ export interface LibraryBulletin {
   smv_min: number;
   smv_tmu: number;
   engine_version: string;
-  operations: Record<string, unknown>[];
+  operations: LibraryBulletinOperation[];
   warnings: string[];
 }
 

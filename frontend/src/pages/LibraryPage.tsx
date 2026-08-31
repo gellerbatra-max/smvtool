@@ -127,17 +127,14 @@ export function LibraryPage() {
               </tr>
             </thead>
             <tbody>
-              {bulletin.operations.map((op, i) => {
-                const o = op as Record<string, unknown>;
-                return (
-                  <tr key={i}>
-                    <td>{i + 1}</td>
-                    <td>{String(o.operation_name ?? o.name ?? "—")}</td>
-                    <td>{typeof o.ST_op_min === "number" ? o.ST_op_min.toFixed(4) : "—"}</td>
-                    <td>{typeof o.ST_op_s === "number" ? o.ST_op_s.toFixed(2) : "—"}</td>
-                  </tr>
-                );
-              })}
+              {bulletin.operations.map((op, i) => (
+                <tr key={i}>
+                  <td>{i + 1}</td>
+                  <td>{op.operation}</td>
+                  <td>{op.ST_op_min.toFixed(4)}</td>
+                  <td>{op.ST_op_s.toFixed(2)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </>
