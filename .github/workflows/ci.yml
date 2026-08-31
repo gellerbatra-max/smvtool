@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine (82 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install pytest numpy scipy pandas statsmodels matplotlib
+      - name: Run engine test suite
+        run: PYTHONPATH=. python -m pytest test_engine.py test_calibration.py test_shirt_library.py -q
+
+  analytics:
+    name: Analytics (83 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install pytest numpy scipy pandas statsmodels matplotlib
+      - name: Run analytics test suite
+        working-directory: analytics
+        run: SMV_ENGINE_DIR=$(pwd)/.. PYTHONPATH=. python -m pytest tests/ -q
+
+  backend-sqlite:
+    name: Backend (34 tests, SQLite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Run backend test suite
+        working-directory: backend
+        run: PYTHONPATH=.:smv_engine python -m pytest tests/ -q
+
+  backend-postgres:
+    name: Backend (34 tests, live Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: smv
+          POSTGRES_PASSWORD: smv
+          POSTGRES_DB: smvtool
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+      - name: Run Alembic migrations against Postgres
+        working-directory: backend
+        env:
+          SMV_DATABASE_URL: postgresql+psycopg://smv:smv@localhost:5432/smvtool
+        run: python -m alembic upgrade head
+      - name: Full upgrade/downgrade/upgrade cycle
+        working-directory: backend
+        env:
+          SMV_DATABASE_URL: postgresql+psycopg://smv:smv@localhost:5432/smvtool
+        run: |
+          python -m alembic downgrade base
+          python -m alembic upgrade head
+      - name: Run backend test suite against Postgres
+        working-directory: backend
+        env:
+          TEST_DATABASE_URL: postgresql+psycopg://smv:smv@localhost:5432/smvtool
+        run: PYTHONPATH=.:smv_engine python -m pytest tests/ -q
+
+  frontend:
+    name: Frontend (build + 21 tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Type-check
+        working-directory: frontend
+        run: npx tsc -b
+      - name: Production build
+        working-directory: frontend
+        run: npm run build
+      - name: Run test suite
+        working-directory: frontend
+        run: npm test
