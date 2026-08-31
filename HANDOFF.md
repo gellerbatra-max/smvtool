@@ -37,12 +37,12 @@ TypeScript) frontend, **Docker Compose** ties all three together.
 | Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 34/34 (each dialect) |
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
 | Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 34 |
-| Frontend (React SPA) | ✅ Builds clean, type-checks clean, tested | 21/21 |
-| End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP against both SQLite and Postgres backends | — |
+| Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 46/46 |
+| End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP **and through the real browser UI** against both SQLite and Postgres backends | — |
 | CI (GitHub Actions) | ✅ All 5 jobs green on every push — engine, analytics, backend×2 dialects, frontend | — |
-| Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend | — |
+| Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend, live-verified | — |
 
-**Total: 254 tests, all independently re-run and passing, 0 failing.**
+**Total: 279 tests, all independently re-run and passing, 0 failing.**
 
 ## What changed most recently
 
@@ -66,6 +66,18 @@ prior write-up:
 - **Docker Compose added**: `db` + `backend` (runs `alembic upgrade head` on
   container start) + `frontend` (nginx-served static build), wired together with a
   required `.env` so no service can accidentally boot on dev-default secrets.
+- **The frontend was walked through a real browser for the first time ever**
+  (`701fb90`, `a581a72`), against the running Docker containers — not curl, not a
+  mocked test. That found and fixed **two more real bugs**: any FastAPI/Pydantic
+  validation error rendered as the literal text `[object Object],[object Object]`
+  app-wide (the client did `String()` on the error-detail array), and every row on
+  the Library page showed `—` instead of the operation name (the frontend read
+  `operation_name ?? name`, neither of which exists — the real key on that
+  passthrough endpoint is `operation`). Both fixed, both regression-tested.
+- **Frontend test coverage completed** (`e107a2a`): every page in `frontend/src/pages/`
+  now has a dedicated test file (StyleListPage, BulletinPage, AnalyticsPage,
+  StyleEditorPage added — 21 to 46 tests), fixtures shaped against real backend
+  responses fetched live, not guessed.
 
 ## How to run the whole stack (Docker Compose)
 
@@ -183,25 +195,26 @@ smvtool/
 │   ├── migrations/                <- Alembic (verified against live Postgres, see SCHEMA.md)
 │   ├── SCHEMA.md                  <- schema + design decisions + Postgres/SQLite verification log
 │   └── tests/                     <- conftest.py supports TEST_DATABASE_URL for Postgres runs
-└── frontend/                      <- React SPA, builds clean, 21/21 tests passing
+└── frontend/                      <- React SPA, builds clean, 46/46 tests passing
     ├── Dockerfile, nginx.conf     <- multi-stage build, served static via nginx
     ├── src/{api,auth,components,pages,lib}/
-    └── tests/                     <- apiClient, ProtectedRoute, CalibrationBadge, LoginPage, App integration
+    └── tests/                     <- one file per page (Login/Library/StyleList/Bulletin/
+                                       Analytics/StyleEditor) + apiClient, ProtectedRoute,
+                                       CalibrationBadge, App integration
 ```
 
 ## Suggested next steps, in order
 
-1. **Expand frontend test coverage.** The current 21 tests cover the API client, auth
-   guarding, one page, and one integration smoke test — not every page
-   (StyleEditorPage, BulletinPage, AnalyticsPage, LibraryPage don't have dedicated
-   component tests yet).
-2. **Decide on a LICENSE.** The project's entire premise is being IP-clean; an
+1. **Decide on a LICENSE.** The project's entire premise is being IP-clean; an
    explicit license (even a private/proprietary one) closes that loop formally.
-3. **Harden default-secret behavior in the non-Docker path.** `docker-compose.yml`
+2. **Harden default-secret behavior in the non-Docker path.** `docker-compose.yml`
    already refuses to start without real secrets; running the backend directly with
    `uvicorn` still only logs a warning if `SMV_JWT_SECRET`/
    `SMV_BOOTSTRAP_ADMIN_PASSWORD` are left on their dev defaults.
-4. **The real factory time-study campaign**, whenever the user has floor access — per
+3. **The real factory time-study campaign**, whenever the user has floor access — per
    `engine_phase1_report.md` §5. This is the actual bottleneck on the engine being
    trustworthy for payroll-grade numbers, independent of the application layer's
    completeness, which is otherwise in good shape.
+
+Frontend test coverage (every page, all 46 tests) and Docker deployment are both
+done as of this revision — see "What changed most recently" above.
