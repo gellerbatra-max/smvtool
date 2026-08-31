@@ -34,7 +34,7 @@ TypeScript) frontend.
 | Calculation engine (3 pillars + assembly) | ✅ Complete | 35/35 |
 | Calibration module (hierarchical coefficient fitting) | ✅ Complete, validated only on synthetic data | +27 (62 total) |
 | Woven-shirt operation library (CLASSIC/SHORT_SLEEVE/BLOUSE_COLLARLESS, 5 sizes) | ✅ Complete | +20 (82 total) |
-| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, tested against SQLite (Postgres untested — see below) | 34/34 |
+| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, tested against SQLite **and live Postgres** — see below | 34/34 (both backends) |
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
 | Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 34 |
 | **Frontend (React SPA)** | ⚠️ **Source written, UNVERIFIED — see below** | **0 (tests/ is empty)** |
@@ -87,14 +87,20 @@ pytest tests/ -q` (83/83 passing).
 
 ## Known, disclosed limitations (not bugs — documented in the code/reports)
 
-1. **PostgreSQL was never actually tested.** This sandbox cannot start a real Postgres
-   server (`initdb` fails with `shmget EPERM` at the syscall level, reproduced even
-   after installing the `postgresql` conda package). The backend's 34 tests run against
-   SQLite through identical SQLAlchemy ORM models (a dialect-aware JSONB/JSON shim
-   handles the one Postgres-specific column type). The Postgres DDL was verified to
-   *compile* correctly, and Alembic's upgrade/downgrade were exercised against SQLite,
-   but **never against a live Postgres instance.** Do this before any real deployment —
-   see `backend/SCHEMA.md`'s "Postgres vs SQLite testing" section.
+1. ~~**PostgreSQL was never actually tested.**~~ **Resolved.** The original sandbox
+   this project was built in couldn't start Postgres at all (`initdb` failed with
+   `shmget EPERM` at the syscall level), but that turned out to be sandbox-specific,
+   not universal — a plain local Postgres 16 install ran it for real: `alembic upgrade
+   head` against a live database, a full upgrade→downgrade→upgrade cycle, the same
+   34-test backend suite re-run against Postgres instead of SQLite (34/34), and the
+   login→seed→compute→bulletin→delete flow exercised by hand over HTTP. This found and
+   fixed **two real Postgres-only bugs** that SQLite's test suite structurally could
+   not have caught (SQLite has no native enum type and doesn't enforce foreign keys by
+   default): the migration's `downgrade()` didn't drop the Postgres `user_role` enum
+   type, and deleting a style with change-log history hit a `ForeignKeyViolation`
+   because the FK had no `ON DELETE` rule. Both fixed — see `backend/SCHEMA.md`'s
+   "Postgres vs SQLite testing" section for the full detail and what's still not
+   covered (concurrency/transaction-isolation behavior under load, JSONB operators).
 2. **Calibration is validated only against synthetic data.** No real factory time-study
    data has been collected yet. `engine_phase1_report.md` §5 sets a concrete target:
    enough real observations to get the coverage report to ≥80% "sufficient" on scope-1

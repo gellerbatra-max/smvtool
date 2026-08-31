@@ -153,12 +153,69 @@ field's value changed at this time", not "a save button was clicked".
   without JSON-path gymnastics, which is what an IE audit or payroll
   dispute actually needs.
 
-## Postgres vs SQLite testing (read before trusting the Postgres path blindly)
+## Postgres vs SQLite testing
 
-**This sandboxed environment cannot run a real PostgreSQL server.** A
-`postgresql` conda package was installed (`initdb`/`pg_ctl`/`postgres`
-18.6, verified present in `$PATH`), but `initdb`'s bootstrap step fails
-unconditionally with:
+**Update:** this schema and backend have now been exercised against a real,
+live PostgreSQL 16 server (Homebrew, macOS), not just SQLite plus a
+DDL-compile check. The original sandbox this project was first built in
+could not start Postgres at all — `initdb` failed unconditionally with
+`shmget EPERM`, a System-V-IPC restriction at the sandbox level, not a
+Postgres misconfiguration — so every prior claim in this section was
+necessarily SQLite-only. That restriction does not apply everywhere; a
+plain local install was enough to run the real thing. The historical
+detail is kept below for anyone hitting the same sandbox limitation.
+
+**What was actually run against live Postgres, not just SQLite:**
+
+- `alembic upgrade head` against a fresh database — real DDL execution, not
+  a compile check. Confirms `document`/`steps`/`audit_trail` land as
+  genuine `jsonb` columns (verified via `\d` and `jsonb_typeof()`), not the
+  SQLite `JSON`/`TEXT` fallback.
+- A full `upgrade head` → `downgrade base` → `upgrade head` cycle.
+- The complete backend pytest suite (34/34) with `TEST_DATABASE_URL`
+  pointed at Postgres instead of SQLite (each test gets its own Postgres
+  *schema*, created and dropped per test, in place of SQLite's per-test
+  temp file — see `tests/conftest.py`).
+- The real login → seed style from library → compute → bulletin → delete
+  flow, exercised by hand over HTTP against a Postgres-backed server.
+
+**Two real, Postgres-only bugs were found and fixed by this — both were
+structurally invisible under SQLite:**
+
+1. **The initial migration's `downgrade()` dropped tables but never dropped
+   the `user_role` enum type Postgres creates for `sa.Enum` columns.**
+   SQLite has no native enum type, so there was nothing to leave behind;
+   on Postgres, a `downgrade` → `upgrade` cycle failed on re-upgrade with
+   `type "user_role" already exists`. Fixed: `downgrade()` now explicitly
+   drops the enum (`sa.Enum(...).drop(bind, checkfirst=True)`), a no-op on
+   SQLite.
+2. **Deleting a style with change-log history raised a
+   `ForeignKeyViolation` on Postgres** (`change_log.style_id → styles.id`
+   had no `ON DELETE` rule, so Postgres defaulted to blocking the delete).
+   SQLite doesn't enforce foreign keys by default, so `DELETE /styles/{id}`
+   silently "worked" under the SQLite test suite the whole time by leaving
+   an orphaned FK value SQLite never checked. Fixed with `ondelete="SET
+   NULL"` on that column (`models.py` and the migration) — the audit row
+   survives the delete with `style_id` nulled, which matches the schema's
+   own stated intent (`style_id` was already nullable, documented as
+   "denormalized for fast per-style audit queries") and this project's
+   broader audit-defensibility requirement: deleting a style must not
+   erase its history.
+
+**Still not verified**, and worth doing before a real deployment:
+Postgres-specific concurrency/transaction-isolation behavior under
+concurrent writers, connection-pool sizing under production load, and
+`JSONB`-specific operators (`->>`, `@>`, GIN indexing) if the application
+ever grows to query inside `steps`/`audit_trail` rather than just
+storing/retrieving them whole.
+
+<details>
+<summary>Historical note: the original sandbox's Postgres restriction (for reference)</summary>
+
+The environment this backend was first built in could not run a real
+PostgreSQL server. A `postgresql` conda package was installed
+(`initdb`/`pg_ctl`/`postgres` 18.6, verified present in `$PATH`), but
+`initdb`'s bootstrap step failed unconditionally with:
 
 ```
 FATAL:  could not create shared memory segment: Operation not permitted
@@ -168,46 +225,12 @@ DETAIL:  Failed system call was shmget(key=..., size=56, 03600).
 This was reproduced across multiple configurations
 (`shared_memory_type=mmap`, `dynamic_shared_memory_type=posix`, reduced
 `shared_buffers`/`max_connections`, `--no-sync`) and confirmed at the
-syscall level: a direct `shmget(IPC_PRIVATE, ...)` call succeeds in this
+syscall level: a direct `shmget(IPC_PRIVATE, ...)` call succeeded in that
 sandbox, but `shmget(<nonzero key>, ..., IPC_CREAT|IPC_EXCL, 0600)` — the
 exact call Postgres's postmaster makes for its small anchor/control
-segment, made **regardless of `shared_memory_type`** — fails with `EPERM`.
-This is a sandbox-level System-V-IPC restriction, not a Postgres
-misconfiguration, and it cannot be worked around by GUC tuning: Postgres
-unconditionally allocates one small SysV segment for stale-postmaster
-detection even when the main shared-memory segment itself uses `mmap`.
+segment, made regardless of `shared_memory_type` — failed with `EPERM`.
+That is a sandbox-level System-V-IPC restriction, not a Postgres
+misconfiguration, and could not be worked around by GUC tuning. It simply
+did not reproduce in a plain local (non-sandboxed) environment.
 
-**Consequently, this schema/backend has been tested against SQLite, not a
-real Postgres server**, via the SAME SQLAlchemy ORM models (`models.py` is
-fully dialect-agnostic; only `app.database.JSONBType`'s dialect selection
-differs). What this means concretely:
-
-- ✅ **Verified**: table/column/constraint definitions, relationships,
-  cascade deletes, CRUD logic, the compute→persist→bulletin flow, auth,
-  and change-log semantics — all exercised end-to-end (22/22 pytest, see
-  test report) against SQLite.
-- ✅ **Verified** (separately, without a live server): the Postgres DDL
-  itself compiles correctly — `sqlalchemy.schema.CreateTable(table).compile
-  (dialect=postgresql.dialect())` was run for every table, and confirms
-  `document`/`steps`/`audit_trail` compile to genuine `JSONB` columns (not
-  `JSON`/`TEXT`) on the Postgres dialect. The Alembic migration
-  (`migrations/versions/..._initial_schema.py`) was generated by
-  `alembic revision --autogenerate` and its `upgrade()`/`downgrade()` were
-  both run successfully against a real SQLite database.
-- ❌ **NOT verified**: actual runtime behavior against a live Postgres
-  server — connection pooling under `psycopg`, `JSONB`-specific operators
-  (`->>`, `@>`, GIN indexing) if the application ever grows to use them,
-  Postgres-specific constraint/transaction-isolation behavior, and the
-  Alembic migration's `upgrade()`/`downgrade()` have NOT been run against
-  Postgres itself (only against SQLite, and only DDL-compiled, not
-  executed, against the Postgres dialect).
-
-**Before any real deployment**, run
-`alembic upgrade head` against an actual Postgres instance (e.g. in CI, or
-locally with Docker: `docker run -e POSTGRES_PASSWORD=... -p 5432:5432
-postgres:16`) and re-run this pytest suite with
-`SMV_DATABASE_URL=postgresql+psycopg://...` pointed at it, before trusting
-this schema in production. Nothing in the design is Postgres-hostile (the
-DDL compiles correctly, per above), but "compiles" and "has been exercised
-end-to-end against a live server" are different claims, and only the first
-one is made here.
+</details>

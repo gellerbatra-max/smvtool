@@ -184,7 +184,14 @@ class ChangeLog(Base):
     id = Column(String, primary_key=True, default=_uuid)
     entity_type = Column(String, nullable=False)  # "style" | "operation" | "allowance_policy" | "user"
     entity_id = Column(String, nullable=False, index=True)
-    style_id = Column(String, ForeignKey("styles.id"), nullable=True, index=True)  # denormalized for fast per-style audit queries
+    # Denormalized for fast per-style audit queries. ondelete=SET NULL rather
+    # than the default RESTRICT: this is an append-only audit trail, so
+    # deleting a style must not either block the delete or silently erase its
+    # history -- the row survives with style_id nulled out. (SQLite doesn't
+    # enforce FKs by default, which is why deleting a style with change-log
+    # rows worked in the SQLite-only test suite but raised a
+    # ForeignKeyViolation the first time this was run against real Postgres.)
+    style_id = Column(String, ForeignKey("styles.id", ondelete="SET NULL"), nullable=True, index=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=True)
     timestamp = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     action = Column(String, nullable=False)  # "create" | "update" | "delete"
