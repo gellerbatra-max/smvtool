@@ -97,7 +97,7 @@ jobs:
         run: PYTHONPATH=.:smv_engine python -m pytest tests/ -q
 
   frontend:
-    name: Frontend (build + 22 tests)
+    name: Frontend (build + 25 tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
