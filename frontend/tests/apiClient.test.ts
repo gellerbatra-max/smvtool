@@ -92,6 +92,25 @@ describe("api client / TokenStore", () => {
     expect(result).toBeUndefined();
   });
 
+  it("a 422 with a Pydantic-shaped detail array renders a readable message, not '[object Object]'", async () => {
+    // Found via an actual browser walkthrough against a live backend, not a
+    // mocked test: FastAPI/Pydantic 422s send `detail` as an array of
+    // {type, loc, msg, input} objects. String(thatArray) previously produced
+    // the literal text "[object Object],[object Object]".
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      jsonResponse(422, {
+        detail: [
+          { type: "missing", loc: ["body", "username"], msg: "Field required", input: null },
+          { type: "missing", loc: ["body", "password"], msg: "Field required", input: null },
+        ],
+      })
+    );
+
+    await expect(api.login("", "")).rejects.toThrow(
+      "username: Field required; password: Field required"
+    );
+  });
+
   it("attaches the stored bearer token as an Authorization header on authenticated calls", async () => {
     tokenStore.set({ token: "my-jwt", role: "ie_engineer", username: "u" });
     const fetchMock = vi.spyOn(global, "fetch").mockResolvedValue(jsonResponse(200, []));

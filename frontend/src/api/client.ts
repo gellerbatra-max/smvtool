@@ -124,6 +124,31 @@ interface RequestOptions {
   form?: Record<string, string>;
 }
 
+// FastAPI/Pydantic validation errors send `detail` as an array of
+// {type, loc, msg, input} objects, not a string. A plain String(detail) on
+// that array stringifies each element via its default Object.toString(),
+// producing the literal text "[object Object],[object Object]" -- surfaced
+// verbatim to users until this was caught by an actual browser walkthrough
+// against a running backend (no mocked test exercises this path). Handles
+// both shapes: a plain string `detail` (e.g. 401's "Not authenticated")
+// passes through unchanged; an array of validation-error objects is
+// rendered as "field: message" pairs.
+function formatErrorDetail(detail: unknown): string | undefined {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail
+      .map((item) => {
+        if (!item || typeof item !== "object" || !("msg" in item)) return undefined;
+        const { loc, msg } = item as { loc?: unknown[]; msg: unknown };
+        const field = Array.isArray(loc) ? loc.filter((p) => p !== "body").join(".") : undefined;
+        return field ? `${field}: ${String(msg)}` : String(msg);
+      })
+      .filter((m): m is string => Boolean(m));
+    return messages.length ? messages.join("; ") : undefined;
+  }
+  return undefined;
+}
+
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
   const url = new URL(path, API_BASE_URL);
   if (query) {
@@ -187,7 +212,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
   if (!res.ok) {
     const message =
       (isJson && payload && typeof payload === "object" && "detail" in payload
-        ? String((payload as { detail?: unknown }).detail)
+        ? formatErrorDetail((payload as { detail?: unknown }).detail)
         : undefined) || `Request failed with status ${res.status}`;
     throw new ApiError(res.status, message, payload);
   }
