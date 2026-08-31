@@ -8,7 +8,7 @@ services:
     volumes:
       - smv_postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smv}"]
       interval: 5s
@@ -24,7 +24,16 @@ services:
       SMV_BOOTSTRAP_ADMIN_PASSWORD: ${SMV_BOOTSTRAP_ADMIN_PASSWORD:?set SMV_BOOTSTRAP_ADMIN_PASSWORD in .env -- do not deploy on the dev default}
       SMV_CORS_ORIGINS: ${SMV_CORS_ORIGINS:-http://localhost:5173}
     ports:
-      - "8000:8000"
+      # Bound to 127.0.0.1 explicitly, not just "8000:8000" (which Docker
+      # publishes on both 0.0.0.0 AND ::, the IPv6 wildcard). Colima's
+      # userspace port forwarder (gvisor-tap-vsock) advertises the IPv6
+      # binding but doesn't reliably forward it -- a browser resolving
+      # "localhost" tries ::1 first (Happy Eyeballs), stalls on that dead
+      # forward for several seconds, then falls back to IPv4 and works.
+      # Binding to 127.0.0.1 only removes the IPv6 listener entirely so
+      # there's nothing to stall on. (curl doesn't show this: it fails the
+      # ::1 attempt fast enough that the IPv4 fallback looks instant.)
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -35,7 +44,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       - backend
 
