@@ -4,23 +4,121 @@
    primitives (buttons, forms, tables), then per-page/component blocks.
    ============================================================ */
 
+/* ============================================================
+   Design tokens -- see UI_UX_PLAN.md section 4. Warm terracotta-orange
+   palette matching Claude/Anthropic's public brand colors (community-
+   compiled, cross-checked against several independent sources -- not an
+   Anthropic-issued spec). Every text/background pair is WCAG 2.1 AA
+   contrast-checked (>=4.5:1 normal text, >=3:1 large text/icons):
+   --color-primary itself fails AA with white text (3.12:1), so buttons
+   filled with it pair with --color-text-inverse (dark, 5.90:1) instead of
+   white; anywhere the accent is used AS text on a light bg (links, active
+   nav, secondary-button labels) uses --color-primary-dark (5.35:1).
+   ============================================================ */
 :root {
-  --color-bg: #f4f5f7;
+  --color-primary: #d97757;
+  --color-primary-dark: #b34a28;
+  --color-primary-light-bg: #fbeee7;
+
+  --color-bg: #faf9f5;
   --color-surface: #ffffff;
-  --color-border: #dde1e6;
-  --color-text: #1f2430;
-  --color-text-muted: #5b6270;
-  --color-primary: #2f5fd6;
-  --color-primary-dark: #24469f;
-  --color-danger: #c53030;
-  --color-danger-bg: #fdecec;
-  --color-success: #1a7f4e;
-  --color-success-bg: #eaf7ef;
-  --color-warn: #b9720c;
-  --color-warn-bg: #fdf3e2;
-  --radius: 6px;
-  --shadow-card: 0 1px 3px rgba(20, 24, 32, 0.08), 0 1px 2px rgba(20, 24, 32, 0.06);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --color-surface-raised: #ffffff;
+  --color-border: #e8e6dc;
+  --color-border-strong: #908d81;
+  --color-text: #141413;
+  --color-text-muted: #767368;
+  --color-text-inverse: #141413;
+
+  --color-success: #66774f;
+  --color-success-bg: #f1f4ec;
+  --color-success-border: #788c5d;
+  --color-warn: #8d611e;
+  --color-warn-bg: #fbf3e4;
+  --color-warn-border: #c98a2b;
+  --color-danger: #b23a2e;
+  --color-danger-bg: #fbedea;
+  --color-danger-border: #b23a2e;
+
+  --color-role-viewer: #767368;
+  --color-role-viewer-bg: #efeee8;
+  --color-role-engineer: #b34a28;
+  --color-role-engineer-bg: #fbeee7;
+  --color-role-admin: #66774f;
+  --color-role-admin-bg: #f1f4ec;
+
+  --font-sans: -apple-system, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 15px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius: var(--radius-md); /* back-compat alias for existing component rules */
+  --shadow-card: 0 1px 3px rgba(20, 16, 12, 0.08), 0 1px 2px rgba(20, 16, 12, 0.06);
+  --shadow-popover: 0 8px 24px rgba(20, 16, 12, 0.18);
+
+  --sidebar-width: 220px;
+  --sidebar-width-collapsed: 56px;
+  --topbar-height: 56px;
+  --content-max-width: 1280px;
+  --touch-target-min: 40px;
+
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+
+  font-family: var(--font-sans);
+}
+
+/* Dark theme -- toggled via data-theme="dark" on <html>, persisted in
+   localStorage (see ThemeToggle / useTheme), NOT prefers-color-scheme
+   alone: shop-floor lighting doesn't track a device's OS theme setting. */
+[data-theme="dark"] {
+  --color-primary: #d97757;
+  --color-primary-dark: #e49f89;
+  --color-primary-light-bg: #3a2a20;
+
+  --color-bg: #1e1b17;
+  --color-surface: #262320;
+  --color-surface-raised: #2f2b26;
+  --color-border: #3a352e;
+  --color-border-strong: #555045;
+  --color-text: #f0eee6;
+  --color-text-muted: #a8a296;
+  --color-text-inverse: #141413;
+
+  --color-success: #9db184;
+  --color-success-bg: #2a2f22;
+  --color-success-border: #788c5d;
+  --color-warn: #dba75a;
+  --color-warn-bg: #332615;
+  --color-warn-border: #c98a2b;
+  --color-danger: #e08579;
+  --color-danger-bg: #362019;
+  --color-danger-border: #b23a2e;
+
+  --color-role-viewer: #a8a296;
+  --color-role-viewer-bg: #2f2b26;
+  --color-role-engineer: #e49f89;
+  --color-role-engineer-bg: #3a2a20;
+  --color-role-admin: #9db184;
+  --color-role-admin-bg: #2a2f22;
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -57,7 +155,9 @@ code {
 }
 
 a {
-  color: var(--color-primary);
+  /* --color-primary itself is 3.12:1 on white -- fails AA normal text.
+     primary-dark (5.35:1) is the text-safe shade; see app.css's :root note. */
+  color: var(--color-primary-dark);
 }
 
 /* ---------- shell / layout ---------- */
@@ -70,8 +170,9 @@ a {
 
 .app-main {
   flex: 1;
+  min-width: 0;
   padding: 24px 32px;
-  max-width: 1200px;
+  max-width: var(--content-max-width);
   width: 100%;
   margin: 0 auto;
 }
@@ -101,13 +202,60 @@ a {
   margin: -8px 0 0;
 }
 
-/* ---------- navbar ---------- */
+/* ---------- style detail tabs (Bulletin | Operations | Analytics) ---------- */
 
-.navbar {
+.style-tabs-wrap {
+  margin-bottom: 4px;
+}
+
+.breadcrumb {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+}
+
+.breadcrumb a {
+  color: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.style-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.style-tab {
+  padding: 8px 14px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: var(--text-base);
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.style-tab:hover {
+  color: var(--color-text);
+}
+
+.style-tab-active {
+  color: var(--color-primary-dark);
+  border-bottom-color: var(--color-primary);
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 12px 32px;
+  gap: 20px;
+  height: var(--topbar-height);
+  padding: 0 20px;
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
@@ -115,53 +263,169 @@ a {
   z-index: 10;
 }
 
-.navbar-brand {
+.topbar-brand {
   font-weight: 700;
-  font-size: 16px;
+  font-size: var(--text-md);
   color: var(--color-primary-dark);
+  white-space: nowrap;
 }
 
-.navbar-links {
-  display: flex;
-  gap: 16px;
-  flex: 1;
+.topbar-search {
+  flex: 0 1 320px;
 }
 
-.navbar-links a {
-  color: var(--color-text-muted);
-  text-decoration: none;
-  padding: 6px 4px;
-  border-bottom: 2px solid transparent;
+.topbar-search input {
+  padding: 7px 12px;
 }
 
-.navbar-links a.nav-link-active,
-.navbar-links a:hover {
-  color: var(--color-text);
-  border-bottom-color: var(--color-primary);
-}
-
-.navbar-right {
+.topbar-right {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
 }
 
-.navbar-user {
+/* Hidden on desktop; shown at <768px (see the responsive media query
+   below) once .topbar-search itself is hidden there. */
+.topbar-search-toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  cursor: pointer;
+}
+
+.topbar-search-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  background: var(--color-surface);
+  z-index: 11;
+}
+
+.topbar-search-overlay input {
+  flex: 1;
+}
+
+.theme-toggle {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  width: var(--touch-target-min);
+  height: var(--touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  background: var(--color-bg);
+}
+
+.topbar-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
+  white-space: nowrap;
 }
 
 .role-pill {
   display: inline-block;
-  margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
-  background: var(--color-bg);
+  background: var(--color-role-viewer-bg);
   border: 1px solid var(--color-border);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  color: var(--color-role-viewer);
+}
+
+.role-pill-ie_engineer {
+  background: var(--color-role-engineer-bg);
+  color: var(--color-role-engineer);
+}
+
+.role-pill-administrator {
+  background: var(--color-role-admin-bg);
+  color: var(--color-role-admin);
+}
+
+/* ---------- sidebar ---------- */
+
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar {
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 12px;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.sidebar-link {
+  display: block;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.sidebar-link:hover {
+  background: var(--color-bg);
+}
+
+.sidebar-link-active {
+  background: var(--color-primary-light-bg);
+  color: var(--color-primary-dark);
+}
+
+.sidebar-new-style {
+  margin-top: 8px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.sidebar-admin-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebar-section-label {
+  padding: 4px 12px 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--color-text-muted);
+}
+
+.sidebar-link-admin-active {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
 }
 
 /* toast banner (e.g. 403 forbidden notice) */
@@ -217,7 +481,8 @@ a {
 .btn-primary {
   background: var(--color-primary);
   border-color: var(--color-primary);
-  color: #fff;
+  /* white-on-primary is 3.12:1, fails AA -- dark text passes at 5.90:1 */
+  color: var(--color-text-inverse);
 }
 
 .btn-primary:hover {
@@ -228,11 +493,13 @@ a {
 .btn-secondary {
   background: var(--color-surface);
   border-color: var(--color-primary);
-  color: var(--color-primary);
+  /* border only needs the 3:1 non-text floor (primary passes at 3.12:1);
+     text needs 4.5:1, which the raw accent fails -- use primary-dark */
+  color: var(--color-primary-dark);
 }
 
 .btn-secondary:hover {
-  background: #eef2fd;
+  background: var(--color-primary-light-bg);
 }
 
 .btn-ghost {
@@ -284,7 +551,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(47, 95, 214, 0.15);
+  box-shadow: 0 0 0 3px rgba(217, 119, 87, 0.2);
 }
 
 .checkbox-label {
@@ -394,7 +661,7 @@ textarea:focus {
 .data-table tr:hover td,
 .operations-table tr:hover td,
 .steps-table tr:hover td {
-  background: rgba(47, 95, 214, 0.04);
+  background: rgba(217, 119, 87, 0.06);
 }
 
 .audit-trail-header {
@@ -431,7 +698,7 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, var(--color-bg) 0%, #e8ebf3 100%);
+  background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-primary-light-bg) 100%);
 }
 
 .login-card {
@@ -506,7 +773,7 @@ textarea:focus {
 }
 
 .op-row-expanded td {
-  background: rgba(47, 95, 214, 0.04);
+  background: rgba(217, 119, 87, 0.06);
 }
 
 .raw-json-editor {
@@ -582,7 +849,7 @@ textarea:focus {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(20, 24, 32, 0.18);
+  box-shadow: var(--shadow-popover);
   padding: 16px;
   z-index: 20;
 }
@@ -672,4 +939,197 @@ textarea:focus {
   color: var(--color-warn);
   font-size: 12px;
   padding-left: 18px;
+}
+
+/* ============================================================
+   Responsive breakpoints -- see UI_UX_PLAN.md section 6. CSS custom
+   properties can't gate a media query directly, so the pixel values
+   below are literal, but must stay in sync with the documented
+   --sidebar-width / --sidebar-width-collapsed / --touch-target-min /
+   --content-max-width tokens in :root.
+   ============================================================ */
+
+/* .table-scroll wraps the denser/edit-mode tables (bulletin, operations,
+   steps, calibration, line-balance) that aren't safe to card-stack in this
+   pass -- they scroll horizontally within a bounded, bordered card instead
+   of overflowing the page edge. .responsive-table (StyleListPage,
+   LibraryPage, UsersPage, AllowancePolicyPage) gets the fuller
+   card-per-row treatment below at <768px via each td's data-label. */
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table-scroll table {
+  border: none;
+}
+
+/* ---- >=1440px: dual-monitor analytics review ----
+   --content-max-width + margin:0 auto on .app-main (set earlier) already
+   caps and centers the main column; nothing further needed here. */
+
+/* ---- 768-1024px: tablet landscape / small laptop ---- */
+@media (max-width: 1024px) {
+  .sidebar {
+    width: 160px;
+  }
+
+  .style-form-inline {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16px;
+    align-items: start;
+  }
+
+  .style-form-inline > button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+/* ---- <768px: factory-floor tablet, portrait ---- */
+@media (max-width: 767px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 10px;
+  }
+
+  .topbar-brand {
+    font-size: var(--text-base);
+  }
+
+  /* Global search collapses behind the icon-triggered overlay rendered by
+     TopBar (see .topbar-search-toggle / .topbar-search-overlay above). */
+  .topbar-search {
+    display: none;
+  }
+
+  .topbar-search-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .topbar-user span:not(.role-pill) {
+    display: none; /* keep the role pill, drop the plain username text */
+  }
+
+  .app-body {
+    flex-direction: column;
+  }
+
+  /* Sidebar becomes a horizontal chip strip above the content -- the
+     "bottom tab bar" alternative named in UI_UX_PLAN.md section 6, chosen
+     over an icon-only rail since this codebase has no icon set yet and an
+     unlabeled rail would fail the same accessibility bar as the icons it
+     replaces. */
+  .sidebar {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    padding: 8px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    gap: 6px;
+  }
+
+  .sidebar-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .sidebar-new-style {
+    margin-top: 0;
+  }
+
+  .sidebar-admin-section {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+  }
+
+  .sidebar-section-label {
+    padding: 0 4px;
+  }
+
+  .app-main {
+    padding: 16px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header-actions {
+    justify-content: flex-start;
+  }
+
+  /* Touch-target floor: every button grows to >=40px tall. */
+  .btn {
+    min-height: var(--touch-target-min);
+    padding: 9px 14px;
+  }
+
+  .theme-toggle {
+    width: var(--touch-target-min);
+    height: var(--touch-target-min);
+  }
+
+  /* .responsive-table: header row hidden, each row becomes a bordered
+     label:value card via the td's own data-label attribute. */
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table,
+  .responsive-table tbody,
+  .responsive-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-table tr {
+    margin-bottom: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 4px 12px;
+  }
+
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--color-border);
+    text-align: right;
+  }
+
+  .responsive-table td:last-child {
+    border-bottom: none;
+  }
+
+  .responsive-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .responsive-table td.row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 6px;
+  }
 }

@@ -117,7 +117,7 @@ export function LibraryPage() {
               ))}
             </ul>
           )}
-          <table className="data-table">
+          <table className="data-table responsive-table">
             <thead>
               <tr>
                 <th>#</th>
@@ -129,10 +129,10 @@ export function LibraryPage() {
             <tbody>
               {bulletin.operations.map((op, i) => (
                 <tr key={i}>
-                  <td>{i + 1}</td>
-                  <td>{op.operation}</td>
-                  <td>{op.ST_op_min.toFixed(4)}</td>
-                  <td>{op.ST_op_s.toFixed(2)}</td>
+                  <td data-label="#">{i + 1}</td>
+                  <td data-label="Operation">{op.operation}</td>
+                  <td data-label="ST (min)">{op.ST_op_min.toFixed(4)}</td>
+                  <td data-label="ST (s)">{op.ST_op_s.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>

@@ -73,6 +73,7 @@ export function StepsEditor({
 
   return (
     <div className="steps-editor">
+      <div className="table-scroll">
       <table className="steps-table">
         <thead>
           <tr>
@@ -144,6 +145,7 @@ export function StepsEditor({
           ))}
         </tbody>
       </table>
+      </div>
       <button type="button" className="btn btn-secondary" onClick={addStep}>
         + Add step
       </button>

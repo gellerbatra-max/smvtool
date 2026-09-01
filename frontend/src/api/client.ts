@@ -10,6 +10,7 @@
 //   nearest boundary; App.tsx subscribes once to redirect-on-401 /
 //   toast-on-403.
 import type {
+  AllowancePolicyCreate,
   AllowancePolicyOut,
   BulletinOut,
   ComputeRequest,
@@ -281,6 +282,8 @@ export const api = {
   // --------------------------------------------------------- allowance --
   listAllowancePolicies: () => request<AllowancePolicyOut[]>("/allowance-policies"),
   activeAllowancePolicy: () => request<AllowancePolicyOut>("/allowance-policies/active"),
+  createAllowancePolicyVersion: (payload: AllowancePolicyCreate) =>
+    request<AllowancePolicyOut>("/allowance-policies", { method: "POST", body: payload }),
 
   // ------------------------------------------------------------ analytics --
   lineBalance: (styleId: string, payload: LineBalanceRequest) =>

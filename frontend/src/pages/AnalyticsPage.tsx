@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { LineBalanceOut, StyleDetailOut, WhatIfResult } from "../api/types";
 import { RequireRole } from "../components/ProtectedRoute";
+import { StyleTabs } from "../components/StyleTabs";
 import { JsonTree } from "../components/JsonTree";
 
 export function AnalyticsPage() {
@@ -17,6 +18,7 @@ export function AnalyticsPage() {
 
   return (
     <div className="page">
+      <StyleTabs styleId={id} styleName={style?.name} />
       <h1>Analytics {style ? `— ${style.name}` : ""}</h1>
       <LineBalanceSection styleId={id} />
       <RequireRole roles={["ie_engineer", "administrator"]}>
@@ -90,6 +92,7 @@ function LineBalanceSection({ styleId }: { styleId: string }) {
             </span>
           </div>
           {result.workstations && (
+            <div className="table-scroll">
             <table className="data-table">
               <thead>
                 <tr>
@@ -110,6 +113,7 @@ function LineBalanceSection({ styleId }: { styleId: string }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       )}

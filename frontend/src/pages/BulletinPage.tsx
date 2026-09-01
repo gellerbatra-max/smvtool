@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { BulletinOut, CostingReport } from "../api/types";
 import { JsonTree } from "../components/JsonTree";
+import { StyleTabs } from "../components/StyleTabs";
 import { exportBulletinToExcel, exportBulletinToPdf } from "../lib/exports";
 import { useAuth, canWrite } from "../auth/AuthContext";
 
@@ -64,6 +65,7 @@ export function BulletinPage() {
 
   return (
     <div className="page">
+      {id && <StyleTabs styleId={id} styleName={bulletin.style.name} />}
       <div className="page-header">
         <div>
           <h1>{bulletin.style.name}</h1>
@@ -78,12 +80,6 @@ export function BulletinPage() {
               {computing ? "Computing…" : "Recompute"}
             </button>
           )}
-          <Link className="btn btn-ghost" to={`/styles/${id}/edit`}>
-            Edit operations
-          </Link>
-          <Link className="btn btn-ghost" to={`/styles/${id}/analytics`}>
-            Analytics
-          </Link>
           <button
             className="btn btn-ghost"
             onClick={() => exportBulletinToExcel(bulletin, costing)}
@@ -119,6 +115,7 @@ export function BulletinPage() {
         </div>
       )}
 
+      <div className="table-scroll">
       <table className="data-table bulletin-table">
         <thead>
           <tr>
@@ -175,6 +172,7 @@ export function BulletinPage() {
           })}
         </tbody>
       </table>
+      </div>
 
       <section className="costing-panel">
         <h2>Costing summary</h2>

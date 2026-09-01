@@ -56,6 +56,7 @@ export function CalibrationBadge() {
             <code>{status.taxonomy_version}</code>. Real factory calibration has{" "}
             {status.real_factory_calibration_run ? "" : "NOT "}been run.
           </p>
+          <div className="table-scroll">
           <table className="calibration-table">
             <thead>
               <tr>
@@ -92,6 +93,7 @@ export function CalibrationBadge() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

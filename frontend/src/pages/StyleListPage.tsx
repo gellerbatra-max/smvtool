@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { StyleOut } from "../api/types";
 import { useAuth, canWrite } from "../auth/AuthContext";
@@ -9,6 +9,8 @@ export function StyleListPage() {
   const [styles, setStyles] = useState<StyleOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const query = searchParams.get("q") ?? "";
 
   useEffect(() => {
     api
@@ -17,6 +19,19 @@ export function StyleListPage() {
       .catch((e) => setError(e instanceof Error ? e.message : "failed to load styles"))
       .finally(() => setLoading(false));
   }, []);
+
+  // The backend has no style-search endpoint (see styles_router.py) --
+  // the topbar's global search filters the already-fetched list client-side.
+  const visibleStyles = useMemo(() => {
+    if (!query.trim()) return styles;
+    const q = query.trim().toLowerCase();
+    return styles.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.variant.toLowerCase().includes(q) ||
+        s.garment_type.toLowerCase().includes(q)
+    );
+  }, [styles, query]);
 
   async function handleDelete(id: string) {
     if (!window.confirm("Delete this style? This cannot be undone.")) return;
@@ -40,13 +55,23 @@ export function StyleListPage() {
           </Link>
         )}
       </div>
+      {query && (
+        <p className="style-subtitle">
+          Showing results for “{query}”.{" "}
+          <button className="btn btn-ghost" onClick={() => setSearchParams({})}>
+            Clear search
+          </button>
+        </p>
+      )}
       {error && <div className="form-error">{error}</div>}
       {styles.length === 0 ? (
         <p className="empty-state">
           No styles yet. {canWrite(auth?.role) ? "Create one, or seed one from the library." : ""}
         </p>
+      ) : visibleStyles.length === 0 ? (
+        <p className="empty-state">No styles match “{query}”.</p>
       ) : (
-        <table className="data-table">
+        <table className="data-table responsive-table">
           <thead>
             <tr>
               <th>Name</th>
@@ -59,16 +84,16 @@ export function StyleListPage() {
             </tr>
           </thead>
           <tbody>
-            {styles.map((s) => (
+            {visibleStyles.map((s) => (
               <tr key={s.id}>
-                <td>
+                <td data-label="Name">
                   <Link to={`/styles/${s.id}/bulletin`}>{s.name}</Link>
                 </td>
-                <td>{s.garment_type}</td>
-                <td>{s.variant}</td>
-                <td>{s.size}</td>
-                <td>{s.bundle_size}</td>
-                <td>{new Date(s.updated_at).toLocaleString()}</td>
+                <td data-label="Garment type">{s.garment_type}</td>
+                <td data-label="Variant">{s.variant}</td>
+                <td data-label="Size">{s.size}</td>
+                <td data-label="Bundle size">{s.bundle_size}</td>
+                <td data-label="Updated">{new Date(s.updated_at).toLocaleString()}</td>
                 <td className="row-actions">
                   <Link className="btn btn-ghost" to={`/styles/${s.id}/edit`}>
                     Edit

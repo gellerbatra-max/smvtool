@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { api, ApiError } from "../api/client";
 import type { LibraryCatalog, OperationIn, OperationOut, StyleDetailOut } from "../api/types";
 import { OperationsEditor } from "../components/OperationsEditor";
+import { StyleTabs } from "../components/StyleTabs";
 import { useAuth, canWrite } from "../auth/AuthContext";
 
 // StyleEditorPage -- the style construction entry screen: pick garment
@@ -213,6 +214,7 @@ export function StyleEditorPage() {
 
   return (
     <div className="page">
+      {id && <StyleTabs styleId={id} styleName={name} />}
       <div className="page-header">
         <h1>Edit style</h1>
         <div className="page-header-actions">

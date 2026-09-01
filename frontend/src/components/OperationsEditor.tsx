@@ -78,6 +78,7 @@ export function OperationsEditor({
 
   return (
     <div className="operations-editor">
+      <div className="table-scroll">
       <table className="operations-table">
         <thead>
           <tr>
@@ -156,6 +157,7 @@ export function OperationsEditor({
           ))}
         </tbody>
       </table>
+      </div>
       {!readOnly && (
         <button type="button" className="btn btn-secondary" onClick={() => addOperation()}>
           + Add operation (Enter)

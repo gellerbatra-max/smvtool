@@ -190,6 +190,11 @@ export interface AllowancePolicyOut {
   created_at: string;
 }
 
+export interface AllowancePolicyCreate {
+  policy_name: string;
+  document: Record<string, unknown>;
+}
+
 // ----------------------------------------------------------- library ------
 
 export interface LibraryCatalog {

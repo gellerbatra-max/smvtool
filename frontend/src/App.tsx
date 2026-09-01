@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
-import { NavBar } from "./components/NavBar";
+import { Sidebar } from "./components/Sidebar";
+import { TopBar } from "./components/TopBar";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { StyleListPage } from "./pages/StyleListPage";
@@ -8,13 +9,18 @@ import { LibraryPage } from "./pages/LibraryPage";
 import { StyleEditorPage } from "./pages/StyleEditorPage";
 import { BulletinPage } from "./pages/BulletinPage";
 import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { UsersPage } from "./pages/UsersPage";
+import { AllowancePolicyPage } from "./pages/AllowancePolicyPage";
+import { RequireRole } from "./components/ProtectedRoute";
+import { useTheme } from "./theme/useTheme";
 import "./app.css";
 
 function AppShell() {
-  const { forbiddenMessage, clearForbidden } = useAuth();
+  const { auth, forbiddenMessage, clearForbidden } = useAuth();
+  const [theme, toggleTheme] = useTheme();
   return (
     <div className="app-shell">
-      <NavBar />
+      {auth && <TopBar theme={theme} onToggleTheme={toggleTheme} />}
       {forbiddenMessage && (
         <div className="toast toast-forbidden" role="alert">
           {forbiddenMessage}
@@ -23,7 +29,9 @@ function AppShell() {
           </button>
         </div>
       )}
-      <main className="app-main">
+      <div className="app-body">
+        {auth && <Sidebar />}
+        <main className="app-main">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -74,10 +82,31 @@ function AppShell() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute>
+                <RequireRole roles={["administrator"]}>
+                  <UsersPage />
+                </RequireRole>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/allowance-policy"
+            element={
+              <ProtectedRoute>
+                <RequireRole roles={["administrator"]}>
+                  <AllowancePolicyPage />
+                </RequireRole>
+              </ProtectedRoute>
+            }
+          />
           <Route path="/" element={<Navigate to="/styles" replace />} />
           <Route path="*" element={<Navigate to="/styles" replace />} />
         </Routes>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
