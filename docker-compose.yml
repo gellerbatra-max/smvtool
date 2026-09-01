@@ -8,7 +8,9 @@ services:
     volumes:
       - smv_postgres_data:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      # Host port overridable: default 5432 collides easily with another
+      # project's Postgres already running on a shared dev machine.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smv}"]
       interval: 5s
@@ -33,7 +35,7 @@ services:
       # Binding to 127.0.0.1 only removes the IPv6 listener entirely so
       # there's nothing to stall on. (curl doesn't show this: it fails the
       # ::1 attempt fast enough that the IPv4 fallback looks instant.)
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${BACKEND_HOST_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +46,7 @@ services:
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
     ports:
-      - "127.0.0.1:5173:80"
+      - "127.0.0.1:${FRONTEND_HOST_PORT:-5173}:80"
     depends_on:
       - backend
 
