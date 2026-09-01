@@ -664,6 +664,26 @@ textarea:focus {
   background: rgba(217, 119, 87, 0.06);
 }
 
+/* Safety net for the four "simple" tables (StyleListPage, LibraryPage,
+   UsersPage, AllowancePolicyPage) between their natural content width and
+   the 768px card-stacking breakpoint below. Without this, a table a few
+   dozen px too wide for .app-main forces the *whole page* to scroll
+   horizontally instead of just the table -- found via a live walkthrough
+   at ~820px viewport width, where StyleListPage's table (7 columns,
+   several action links, a full timestamp) overflowed the page. A
+   table-layout:auto table can render wider than its own width:100% when
+   cell content can't wrap; the overflow:hidden on .data-table above only
+   clips content *inside* that already-oversized box, it doesn't stop the
+   box itself from growing past its container. display:block turns the
+   table itself into the scroll container, so it grows internally instead
+   of pushing the page -- no wrapper element needed, and harmless once
+   .responsive-table's own <768px card-stacking rules (below) take over,
+   since there's nothing left to horizontally overflow at that point. */
+.responsive-table {
+  display: block;
+  overflow-x: auto;
+}
+
 .audit-trail-header {
   font-weight: 600;
   color: var(--color-text-muted);

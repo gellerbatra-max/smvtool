@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { CalibrationBadge } from "./CalibrationBadge";
 import type { Theme } from "../theme/useTheme";
@@ -13,8 +13,19 @@ const ROLE_LABEL: Record<string, string> = {
 export function TopBar({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   const { auth, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [query, setQuery] = useState("");
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  // Keep the search box in sync with the URL's own ?q= (the source of
+  // truth StyleListPage reads from) rather than owning an independent copy
+  // -- otherwise "Clear search", the back button, or a direct link to
+  // /styles?q=... leaves stale text sitting in the box that no longer
+  // matches what's on screen.
+  useEffect(() => {
+    setQuery(new URLSearchParams(location.search).get("q") ?? "");
+  }, [location.search]);
+
   if (!auth) return null;
 
   function handleSearchSubmit(e: React.FormEvent) {
@@ -79,7 +90,13 @@ export function TopBar({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: 
           {theme === "dark" ? "🌙" : "☀️"}
         </button>
         <span className="topbar-user">
-          {auth.username}
+          {/* Own <span>, not bare text: app.css's
+              ".topbar-user span:not(.role-pill)" (hides the plain username
+              at <768px, keeping only the role pill) can only ever match an
+              actual element -- bare text was invisible to that selector,
+              so the username never actually hid on mobile, which is what
+              overflowed the topbar in the first place. */}
+          <span>{auth.username}</span>
           <span className={`role-pill role-pill-${auth.role}`}>
             {ROLE_LABEL[auth.role] ?? auth.role}
           </span>
