@@ -37,12 +37,12 @@ TypeScript) frontend, **Docker Compose** ties all three together.
 | Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 34/34 (each dialect) |
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
 | Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 34 |
-| Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 46/46 |
+| Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 69/69 |
 | End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP **and through the real browser UI** against both SQLite and Postgres backends | — |
 | CI (GitHub Actions) | ✅ All 5 jobs green on every push — engine, analytics, backend×2 dialects, frontend | — |
 | Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend, live-verified | — |
 
-**Total: 279 tests, all independently re-run and passing, 0 failing.**
+**Total: 302 tests, all independently re-run and passing, 0 failing.**
 
 ## What changed most recently
 
@@ -78,6 +78,26 @@ prior write-up:
   now has a dedicated test file (StyleListPage, BulletinPage, AnalyticsPage,
   StyleEditorPage added — 21 to 46 tests), fixtures shaped against real backend
   responses fetched live, not guessed.
+- **UI/UX redesign implemented** (`f0157a8`, separate session) and **verified live**
+  (`fc36385`): sidebar shell with role-gated nav, a persisted dark-mode toggle, a
+  global style search, a Bulletin/Operations/Analytics tab strip, two new admin
+  screens (Users, Allowance policy), a terracotta design-token palette, and
+  responsive breakpoints down to mobile. That session explicitly disclosed it
+  never got a live-browser walkthrough (same sandbox constraint as everything
+  else in this project's history) — this one did, down to a real 375px viewport,
+  and found two real bugs: the search box went stale instead of tracking the URL
+  (so "Clear search" didn't visibly clear it), and the topbar's username was bare
+  text instead of its own element, silently breaking the CSS rule meant to hide it
+  on mobile — which is what caused the whole page to scroll horizontally at
+  narrow widths instead of just the table. Both fixed, both regression-tested
+  (confirmed by reverting each fix and watching the new test fail). 69/69 frontend
+  tests passing.
+- **Docker Compose host ports made overridable** (`2fe06e0`): found while
+  re-verifying the above — another project's containers already held 5432, and an
+  unrelated dev server already held 8000 on this machine, which is exactly the
+  kind of thing that silently sends your requests to the wrong service instead of
+  failing loudly. `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` / `FRONTEND_HOST_PORT`
+  now sidestep that without needing to touch someone else's running containers.
 
 ## How to run the whole stack (Docker Compose)
 
@@ -195,12 +215,17 @@ smvtool/
 │   ├── migrations/                <- Alembic (verified against live Postgres, see SCHEMA.md)
 │   ├── SCHEMA.md                  <- schema + design decisions + Postgres/SQLite verification log
 │   └── tests/                     <- conftest.py supports TEST_DATABASE_URL for Postgres runs
-└── frontend/                      <- React SPA, builds clean, 46/46 tests passing
+└── frontend/                      <- React SPA, builds clean, 69/69 tests passing
     ├── Dockerfile, nginx.conf     <- multi-stage build, served static via nginx
-    ├── src/{api,auth,components,pages,lib}/
-    └── tests/                     <- one file per page (Login/Library/StyleList/Bulletin/
-                                       Analytics/StyleEditor) + apiClient, ProtectedRoute,
-                                       CalibrationBadge, App integration
+    ├── src/
+    │   ├── components/            <- Sidebar, TopBar, StyleTabs (new) + CalibrationBadge,
+    │   │                             OperationsEditor, StepsEditor, ProtectedRoute
+    │   ├── pages/                 <- UsersPage, AllowancePolicyPage (new, admin-only) +
+    │   │                             the 6 style/library pages
+    │   ├── theme/useTheme.ts      <- dark-mode toggle, localStorage-persisted
+    │   └── {api,auth,lib}/
+    └── tests/                     <- one file per page/component, incl. Sidebar, TopBar,
+                                       StyleTabs, UsersPage, AllowancePolicyPage
 ```
 
 ## Suggested next steps, in order
