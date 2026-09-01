@@ -27,7 +27,9 @@ backend/
       allowance_router.py            GET/POST /allowance-policies
   smv_engine/                 vendored, unmodified copy of the engine handoff bundle
   migrations/                 Alembic migrations
-  tests/                        pytest suite (22 tests, see test report)
+  scripts/
+    seed_demo_styles.py         populate demo Style records (see "Demo data" below)
+  tests/                        pytest suite (38 tests as of this addition)
   requirements.txt
   alembic.ini
 ```
@@ -73,6 +75,23 @@ load, transaction isolation) has NOT been runtime-tested. Before a real
 deployment, run the migration and full test suite against an actual
 Postgres instance.
 
+## Demo data
+
+The `styles` table starts empty -- every Style is normally created through
+the app (Styles -> New style). To populate a running instance with
+realistic demo data instead of an empty table, run:
+
+```bash
+python scripts/seed_demo_styles.py --base-url http://localhost:8000
+```
+
+This creates one style per (variant, size) combination from the seeded
+`shirt_library.py` catalog -- 3 variants x 5 sizes = 15 styles -- and
+computes each one, so Styles List / Bulletin / Analytics have something to
+show immediately. Safe to re-run: it skips any variant/size combo whose
+exact name already exists. Defaults to the bootstrap admin credentials;
+pass `--username`/`--password` for a different account.
+
 ## API surface
 
 - `POST /auth/login`, `GET /auth/me`
@@ -101,8 +120,9 @@ cd backend
 PYTHONPATH=. pytest tests/ -q
 ```
 
-22/22 passing as of this handoff (against the SQLite fallback — see
-`SCHEMA.md` for why Postgres itself could not be exercised in this sandbox).
+38/38 passing as of this addition (against the SQLite fallback in this
+sandbox — see `SCHEMA.md` for the Postgres-testing disclosure; note that
+Postgres itself has since been exercised in a later session per `HANDOFF.md`).
 
 ## What is NOT built yet (out of scope for this backend track)
 
