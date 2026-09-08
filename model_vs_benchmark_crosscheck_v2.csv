@@ -1,0 +1,9 @@
+component,engine_operation,operation_class,engine_model_sew_time_s,published_n,published_min_s,published_median_s,published_max_s,same_order_of_magnitude
+back_yoke,Join yoke to back (with pleats),yoke,3.54,0,,,,
+back_yoke,Close yoke at shoulder / attach fronts (,shoulder_join,6.19,14,9.6,24.2,65.0,True
+back_yoke,Topstitch yoke seam,yoke,8.11,0,,,,
+sleeve,"Sleeve inseam (underarm), felled or over",sleeve_set,9.49,17,8.4,25.0,76.4,True
+sleeve,Sleeve placket (gauntlet) set + topstitc,sleeve_set,11.0,17,8.4,25.0,76.4,True
+sleeve,Hem sleeve head / attach sleeve to armho,sleeve_hem,11.92,15,11.4,36.0,63.3,True
+armhole,Close armhole seam felling / topstitch,topstitch,18.87,1,85.0,85.0,85.0,True
+side_seam,Close side seam (felled or safety-stitch,side_seam,8.78,4,14.4,25.8,39.0,True

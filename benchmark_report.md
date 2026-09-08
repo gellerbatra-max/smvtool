@@ -1,5 +1,14 @@
 # Phase 0 — Benchmark Literature Report
 
+> **Update:** this single-source (19-row) dataset was expanded to 158 rows
+> across 5 papers in a later session — see `smv_benchmark_sources.md` (the
+> literature synthesis) and `extraction_log.md` (row-by-row provenance) for
+> `smv_benchmarks_v2.csv`. The conclusion below — construction-type mismatch
+> makes this a plausibility check, not a validation — is confirmed, not
+> changed, by the expanded data: every one of the 5 new sources is also knit
+> construction, and `model_vs_benchmark_crosscheck_v2.csv` shows the same
+> order-of-magnitude agreement as the original single-class comparison.
+
 ## Objective
 
 Ground the synthetic SMV engine's outputs against **published, non-proprietary** timing

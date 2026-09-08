@@ -34,15 +34,18 @@ TypeScript) frontend, **Docker Compose** ties all three together.
 | Calculation engine (3 pillars + assembly) | ✅ Complete | 82/82 |
 | Calibration module (hierarchical coefficient fitting) | ✅ Complete, validated only on synthetic data — see limitations | included above |
 | Woven-shirt operation library (CLASSIC/SHORT_SLEEVE/BLOUSE_COLLARLESS, 5 sizes) | ✅ Complete | included above |
-| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 34/34 (each dialect) |
+| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 38/38 (each dialect) |
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
-| Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 34 |
+| Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 38 |
 | Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 69/69 |
 | End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP **and through the real browser UI** against both SQLite and Postgres backends | — |
 | CI (GitHub Actions) | ✅ All 5 jobs green on every push — engine, analytics, backend×2 dialects, frontend | — |
 | Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend, live-verified | — |
 
-**Total: 302 tests, all independently re-run and passing, 0 failing.**
+**Total: 272 tests (82 engine + 83 analytics + 38 backend + 69 frontend), all
+independently re-run and passing, 0 failing.** (This line previously read
+"302 tests" — stale from before `seed_demo_styles.py` grew the backend suite
+from 34 to 38 and the total was never recomputed; corrected here.)
 
 ## What changed most recently
 
@@ -172,6 +175,16 @@ pytest tests/ -q` (83/83 passing).
    actual realized max station load, causing a tiny (~1e-8 relative) but real
    inconsistency. Fixed to report the actual achieved value; verified exact-equality
    in tests.
+6. **The expanded literature benchmark (`smv_benchmarks_v2.csv`, `smv_benchmark_sources.md`,
+   `extraction_log.md`) is knit-garment data validating a woven-shirt engine.** All 5
+   papers found with usable operation-level SMV/SAM tables report knit construction
+   (T-shirts, a polo shirt, a denim jacket); none are woven dress-shirt construction,
+   which is what `seam_geometry.json`'s `CLASSIC` style models. `model_vs_benchmark_crosscheck_v2.csv`
+   confirms every matched operation class lands within the published range's order of
+   magnitude — a plausibility check, not a validation, exactly as the original
+   single-source benchmark report already disclosed. It does **not** change limitation
+   #2 above: real factory time-study data, not more literature, is still the only path
+   to calibration.
 
 ## Credentials / access needed to continue
 
