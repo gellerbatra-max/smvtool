@@ -34,18 +34,17 @@ TypeScript) frontend, **Docker Compose** ties all three together.
 | Calculation engine (3 pillars + assembly) | ✅ Complete | 82/82 |
 | Calibration module (hierarchical coefficient fitting) | ✅ Complete, validated only on synthetic data — see limitations | included above |
 | Woven-shirt operation library (CLASSIC/SHORT_SLEEVE/BLOUSE_COLLARLESS, 5 sizes) | ✅ Complete | included above |
-| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 38/38 (each dialect) |
+| Backend (FastAPI + SQLAlchemy schema + JWT auth + audit log) | ✅ Complete, verified against **both** SQLite and live Postgres | 66/66 (each dialect) |
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
-| Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 38 |
+| Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 66 |
+| Demo database seed (`seed_demo/`) | ✅ All 6 tables, API-driven, idempotent, Docker Compose `demo` profile | included in the 66 |
 | Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 69/69 |
 | End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP **and through the real browser UI** against both SQLite and Postgres backends | — |
 | CI (GitHub Actions) | ✅ All 5 jobs green on every push — engine, analytics, backend×2 dialects, frontend | — |
 | Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend, live-verified | — |
 
-**Total: 272 tests (82 engine + 83 analytics + 38 backend + 69 frontend), all
-independently re-run and passing, 0 failing.** (This line previously read
-"302 tests" — stale from before `seed_demo_styles.py` grew the backend suite
-from 34 to 38 and the total was never recomputed; corrected here.)
+**Total: 300 tests (82 engine + 83 analytics + 66 backend + 69 frontend), all
+independently re-run and passing, 0 failing.**
 
 ## What changed most recently
 
@@ -101,6 +100,32 @@ prior write-up:
   kind of thing that silently sends your requests to the wrong service instead of
   failing loudly. `POSTGRES_HOST_PORT` / `BACKEND_HOST_PORT` / `FRONTEND_HOST_PORT`
   now sidestep that without needing to touch someone else's running containers.
+- **Demo database seed added** (`backend/scripts/seed_demo/`): the earlier
+  `seed_demo_styles.py` only touched styles/operations/smv_results and produced
+  almost no audit history. This new, entirely API-driven seed covers all six
+  tables — 5 users across all three roles (one deliberately disabled via a new
+  `PATCH /users/{id}`), a second allowance-policy version (via a new
+  `GET /allowance-policies/{id}`, which also closes the gap
+  `AllowancePolicyPage.tsx` disclaimed in-page), and 12 realistically-named
+  styles with a mix of multi-generation results, renamed/duplicated/deleted
+  operations, a machine-swap trial that reproduces `analytics/demo.py`'s own
+  what-if scenario almost exactly (12.5727 → 12.5099 min), and one style left
+  deliberately uncomputed. Idempotent via a `[demo-seed:<key>]` tag in each
+  style's `notes` (several styles share an initial product name on purpose,
+  which ruled out name-based matching). Runnable as a plain script or via a new
+  opt-in Compose `demo` profile: `docker compose --profile demo run --rm
+  seed-demo`. Found and fixed one real bug via the seed's own live smoke test
+  before writing a single pytest test for it (an allowance-policy document's
+  `profiles` key is a JSON array, not a dict keyed by code) and worked around a
+  second, genuine one (the `APPAREL_CONVENTIONAL` allowance profile is
+  deliberately unreachable through the normal compute path — `allowance.py`
+  raises rather than silently doing the wrong thing). Verified end-to-end
+  against a live `uvicorn` instance, then again through the full Docker Compose
+  stack (build → healthy → seed → idempotent re-run → `--reset-demo` preserving
+  a real user's style → walked in the browser), plus 16 new tests. Backend
+  suite grew from 50 to 66 in the process (12 tests for the two new endpoints,
+  16 for the seed itself, 4 pre-existing for `seed_demo_styles.py`). Full detail
+  and the dataset table in `backend/README.md`'s "Demo data" section.
 
 ## How to run the whole stack (Docker Compose)
 
@@ -112,10 +137,19 @@ docker compose up --build
 ```
 
 Three services: `db` (Postgres 16, named volume for persistence), `backend`
-(runs `alembic upgrade head` on container start, then FastAPI), `frontend`
-(Vite build served via nginx, SPA routing configured). See
-`docker-compose.yml` / `.env.example` / `backend/Dockerfile` /
-`frontend/Dockerfile`.
+(runs `alembic upgrade head` on container start, then FastAPI, with a
+health check), `frontend` (Vite build served via nginx, SPA routing
+configured). See `docker-compose.yml` / `.env.example` / `backend/Dockerfile`
+/ `frontend/Dockerfile`.
+
+A fourth, opt-in service populates a realistic demo dataset (never runs on
+a plain `up`):
+
+```bash
+docker compose --profile demo run --rm seed-demo   # add --reset-demo to reseed fresh
+```
+
+See `backend/README.md`'s "Demo data" section for the full dataset.
 
 ## How to run the backend locally (without Docker)
 
@@ -218,7 +252,7 @@ smvtool/
 │   ├── line_balancing.py, costing.py, what_if.py, engine_loader.py
 │   ├── INTEGRATION.md             <- how a backend should call this module
 │   └── tests/
-├── backend/                       <- FastAPI application (34 tests, both SQLite & Postgres)
+├── backend/                       <- FastAPI application (66 tests, both SQLite & Postgres)
 │   ├── Dockerfile, docker-entrypoint.sh   <- runs `alembic upgrade head` before uvicorn
 │   ├── app/
 │   │   ├── main.py, models.py, schemas.py, auth.py, audit.py, engine_bridge.py
@@ -226,6 +260,7 @@ smvtool/
 │   │   └── routers/               <- auth, users, styles, library, calibration, allowance, analytics
 │   ├── smv_engine/                <- VENDORED frozen copy of the root engine (see engine_bridge.py)
 │   ├── migrations/                <- Alembic (verified against live Postgres, see SCHEMA.md)
+│   ├── scripts/seed_demo/         <- API-driven demo-database seed, all 6 tables (see README.md)
 │   ├── SCHEMA.md                  <- schema + design decisions + Postgres/SQLite verification log
 │   └── tests/                     <- conftest.py supports TEST_DATABASE_URL for Postgres runs
 └── frontend/                      <- React SPA, builds clean, 69/69 tests passing
