@@ -13,6 +13,12 @@ COPY alembic.ini .
 COPY docker-entrypoint.sh .
 RUN chmod +x docker-entrypoint.sh
 
+# Only needed by the opt-in `seed-demo` Compose service (see
+# docker-compose.yml's `demo` profile), but small (httpx is already a
+# dependency) and simplest to always include rather than build a second
+# image just for it.
+COPY scripts ./scripts
+
 ENV PYTHONPATH=/app:/app/smv_engine \
     PYTHONUNBUFFERED=1
 

@@ -39,6 +39,35 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      # python:3.12-slim has no curl; urllib is stdlib.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  # Opt-in: never runs on a plain `docker compose up`. Populates a
+  # realistic demo dataset (backend/scripts/seed_demo/) across all six
+  # tables via the same REST API a human would use -- see
+  # backend/README.md's "Demo data" section.
+  #
+  #   docker compose --profile demo run --rm seed-demo [--reset-demo]
+  #
+  seed-demo:
+    build: ./backend
+    profiles: ["demo"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["python", "scripts/seed_demo_database.py"]
+    command: ["--wait-for-backend", "120"]
+    environment:
+      SMV_SEED_BASE_URL: http://backend:8000
+      SMV_SEED_USERNAME: ${SMV_BOOTSTRAP_ADMIN_USER:-admin}
+      SMV_SEED_PASSWORD: ${SMV_BOOTSTRAP_ADMIN_PASSWORD:?set SMV_BOOTSTRAP_ADMIN_PASSWORD in .env -- do not deploy on the dev default}
+      SMV_SEED_DEMO_PASSWORD: ${SMV_SEED_DEMO_PASSWORD:-demo-pass-2026}
 
   frontend:
     build:
