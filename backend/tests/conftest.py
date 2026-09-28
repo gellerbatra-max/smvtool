@@ -23,6 +23,7 @@ import os
 os.environ["SMV_SKIP_STARTUP_INIT"] = "1"
 
 import uuid
+from contextlib import contextmanager
 
 import pytest
 from fastapi.testclient import TestClient
@@ -38,8 +39,13 @@ ADMIN_PASSWORD = "admin-test-pw-123"
 TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
 
 
-@pytest.fixture()
-def client(tmp_path):
+@contextmanager
+def isolated_client(db_dir):
+    """Body of the `client` fixture below, factored out so a module-scoped
+    fixture (e.g. one that seeds a larger dataset once for a whole test
+    file) can reuse the exact same isolated-database setup/teardown that
+    `client` uses per-test. `db_dir` is any directory (a function-scoped
+    `tmp_path` or a module-scoped `tmp_path_factory.mktemp(...)`)."""
     if TEST_DATABASE_URL:
         schema = f"test_{uuid.uuid4().hex}"
         engine = create_engine(TEST_DATABASE_URL)
@@ -60,7 +66,7 @@ def client(tmp_path):
             conn.execute(text(f'CREATE SCHEMA "{schema}"'))
             conn.commit()
     else:
-        db_path = tmp_path / f"test_{uuid.uuid4().hex}.db"
+        db_path = db_dir / f"test_{uuid.uuid4().hex}.db"
         engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
     TestingSessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     Base.metadata.create_all(bind=engine)
@@ -84,17 +90,41 @@ def client(tmp_path):
             session.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.clear()
-    engine.dispose()
+    try:
+        with TestClient(app) as c:
+            yield c
+    finally:
+        app.dependency_overrides.clear()
+        engine.dispose()
 
-    if TEST_DATABASE_URL:
-        cleanup_engine = create_engine(TEST_DATABASE_URL)
-        with cleanup_engine.connect() as conn:
-            conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-            conn.commit()
-        cleanup_engine.dispose()
+        if TEST_DATABASE_URL:
+            cleanup_engine = create_engine(TEST_DATABASE_URL)
+            with cleanup_engine.connect() as conn:
+                conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+                conn.commit()
+            cleanup_engine.dispose()
+
+
+@pytest.fixture()
+def client(tmp_path):
+    with isolated_client(tmp_path) as c:
+        yield c
+
+
+@pytest.fixture()
+def db_session(client):
+    """A raw SQLAlchemy session bound to the same isolated engine `client`'s
+    own dependency-injected sessions use -- for assertions on columns the
+    API doesn't expose (e.g. created_by_id / computed_by_id foreign keys)."""
+    gen = app.dependency_overrides[get_db]()
+    session = next(gen)
+    try:
+        yield session
+    finally:
+        try:
+            next(gen)
+        except StopIteration:
+            pass
 
 
 def auth_headers(client: TestClient, username: str, password: str):

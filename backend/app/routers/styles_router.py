@@ -216,6 +216,7 @@ def get_bulletin(style_id: str, db: Session = Depends(get_db),
                 "id": latest.id, "st_op_s": latest.st_op_s, "st_op_min": latest.st_op_min,
                 "bt_op_s": latest.bt_op_s, "bt_op_min": latest.bt_op_min,
                 "allowance_profile": latest.allowance_profile,
+                "allowance_policy_version_id": latest.allowance_policy_version_id,
                 "engine_version": latest.engine_version, "computed_at": latest.computed_at.isoformat(),
                 "audit_trail": latest.audit_trail,
             }

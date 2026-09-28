@@ -33,6 +33,12 @@ class UserOut(BaseModel):
     created_at: datetime.datetime
 
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    role: Optional[str] = Field(default=None, description="ie_engineer | viewer | administrator")
+    is_active: Optional[bool] = None
+
+
 # -------------------------------------------------------------- styles ----
 
 class OperationIn(BaseModel):
@@ -114,6 +120,7 @@ class SMVResultOut(BaseModel):
     bt_op_s: float
     bt_op_min: float
     allowance_profile: str
+    allowance_policy_version_id: Optional[str] = None
     engine_version: str
     calibration_version: Optional[str] = None
     computed_at: datetime.datetime
@@ -175,6 +182,14 @@ class AllowancePolicyOut(BaseModel):
     version: int
     is_active: bool
     created_at: datetime.datetime
+
+
+class AllowancePolicyDetailOut(AllowancePolicyOut):
+    """AllowancePolicyOut plus the full policy document. A separate model
+    (rather than adding `document` to AllowancePolicyOut itself) because
+    GET /allowance-policies intentionally returns metadata-only rows -- the
+    document can be large and the list view never needs it."""
+    document: dict[str, Any]
 
 
 # ------------------------------------------------------------ analytics ----
