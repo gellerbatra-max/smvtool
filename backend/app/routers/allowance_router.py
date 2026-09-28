@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import auth, models, schemas, audit, policy_service
@@ -24,6 +24,18 @@ def get_active_policy(db: Session = Depends(get_db),
                        user: models.User = Depends(auth.require_any_authenticated)):
     row = policy_service.get_active(db)
     db.commit()
+    return row
+
+
+@router.get("/{policy_id}", response_model=schemas.AllowancePolicyDetailOut)
+def get_policy_document(policy_id: str, db: Session = Depends(get_db),
+                         user: models.User = Depends(auth.require_any_authenticated)):
+    """Unlike the list endpoint above, this returns the full `document` --
+    needed to derive a new version from an existing one (e.g. tooling that
+    edits a policy) without hand-retyping it from the vendored engine JSON."""
+    row = policy_service.get_by_id(db, policy_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="allowance policy not found")
     return row
 
 
