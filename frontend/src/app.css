@@ -602,6 +602,16 @@ textarea:focus {
   margin: 0 0 4px;
 }
 
+/* Notices/errors inside an inline form take a full row. The 768-1024px
+   grid layout below pairs children by source order (label | input), so an
+   un-spanned notice is a stray cell that shifts every later pairing by one
+   -- the labels jump to the wrong column. (Found live when the allowance
+   policy page's "loaded from vN" notice was added mid-form.) */
+.style-form-inline > .form-success,
+.style-form-inline > .form-error {
+  flex: 1 1 100%;
+}
+
 /* ---------- generic data tables ---------- */
 
 .data-table,
@@ -1002,8 +1012,13 @@ textarea:focus {
     align-items: start;
   }
 
-  .style-form-inline > button {
+  .style-form-inline > button,
+  .style-form-inline > .form-success,
+  .style-form-inline > .form-error {
     grid-column: 1 / -1;
+  }
+
+  .style-form-inline > button {
     justify-self: start;
   }
 }

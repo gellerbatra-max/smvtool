@@ -190,6 +190,12 @@ export interface AllowancePolicyOut {
   created_at: string;
 }
 
+// GET /allowance-policies/{id}: the list/active endpoints stay metadata-only
+// (the document can be large); only this one returns it.
+export interface AllowancePolicyDetailOut extends AllowancePolicyOut {
+  document: Record<string, unknown>;
+}
+
 export interface AllowancePolicyCreate {
   policy_name: string;
   document: Record<string, unknown>;

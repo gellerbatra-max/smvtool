@@ -38,12 +38,12 @@ TypeScript) frontend, **Docker Compose** ties all three together.
 | Analytics (line balancing, costing, what-if scenarios) | ✅ Complete, standalone | 83/83 |
 | Analytics ↔ backend wiring (`analytics_router.py`) | ✅ Complete | included in the 66 |
 | Demo database seed (`seed_demo/`) | ✅ All 6 tables, API-driven, idempotent, Docker Compose `demo` profile | included in the 66 |
-| Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 69/69 |
+| Frontend (React SPA) | ✅ Builds clean, type-checks clean, every page has dedicated tests | 74/74 |
 | End-to-end validation (UI → API → DB) | ✅ Walked by hand over HTTP **and through the real browser UI** against both SQLite and Postgres backends | — |
 | CI (GitHub Actions) | ✅ All 5 jobs green on every push — engine, analytics, backend×2 dialects, frontend | — |
 | Deployment (Docker Compose) | ✅ `docker-compose.yml` + Dockerfiles for db/backend/frontend, live-verified | — |
 
-**Total: 300 tests (82 engine + 83 analytics + 66 backend + 69 frontend), all
+**Total: 305 tests (82 engine + 83 analytics + 66 backend + 74 frontend), all
 independently re-run and passing, 0 failing.**
 
 ## What changed most recently
@@ -126,6 +126,19 @@ prior write-up:
   suite grew from 50 to 66 in the process (12 tests for the two new endpoints,
   16 for the seed itself, 4 pre-existing for `seed_demo_styles.py`). Full detail
   and the dataset table in `backend/README.md`'s "Demo data" section.
+- **Allowance policy page can now start from an existing version**: each row in
+  the version table has a "Use as starting point" action that loads that
+  version's full document (via the new `GET /allowance-policies/{id}`) and
+  policy name into the create form, pretty-printed, with a notice saying exactly
+  what was loaded and that submitting creates the next version under that name
+  and makes it active. This replaces an in-page note saying the backend
+  couldn't return an existing document — true when it was written, stale once
+  the endpoint existed (the seed entry above only closed the *backend* half of
+  that gap). Notices and errors inside the inline forms now span the full row:
+  the form is a two-column grid on tablet widths that pairs children by source
+  order, so a notice placed mid-form shifted every later label/input pairing
+  into the wrong column. 5 new tests, each confirmed to fail against the old
+  page.
 
 ## How to run the whole stack (Docker Compose)
 
@@ -263,7 +276,7 @@ smvtool/
 │   ├── scripts/seed_demo/         <- API-driven demo-database seed, all 6 tables (see README.md)
 │   ├── SCHEMA.md                  <- schema + design decisions + Postgres/SQLite verification log
 │   └── tests/                     <- conftest.py supports TEST_DATABASE_URL for Postgres runs
-└── frontend/                      <- React SPA, builds clean, 69/69 tests passing
+└── frontend/                      <- React SPA, builds clean, 74/74 tests passing
     ├── Dockerfile, nginx.conf     <- multi-stage build, served static via nginx
     ├── src/
     │   ├── components/            <- Sidebar, TopBar, StyleTabs (new) + CalibrationBadge,

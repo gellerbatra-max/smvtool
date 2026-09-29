@@ -11,6 +11,7 @@
 //   toast-on-403.
 import type {
   AllowancePolicyCreate,
+  AllowancePolicyDetailOut,
   AllowancePolicyOut,
   BulletinOut,
   ComputeRequest,
@@ -282,6 +283,8 @@ export const api = {
   // --------------------------------------------------------- allowance --
   listAllowancePolicies: () => request<AllowancePolicyOut[]>("/allowance-policies"),
   activeAllowancePolicy: () => request<AllowancePolicyOut>("/allowance-policies/active"),
+  getAllowancePolicy: (policyId: string) =>
+    request<AllowancePolicyDetailOut>(`/allowance-policies/${policyId}`),
   createAllowancePolicyVersion: (payload: AllowancePolicyCreate) =>
     request<AllowancePolicyOut>("/allowance-policies", { method: "POST", body: payload }),
 

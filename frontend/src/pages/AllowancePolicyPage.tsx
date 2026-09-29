@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, ApiError } from "../api/client";
 import type { AllowancePolicyOut } from "../api/types";
 
@@ -13,6 +13,11 @@ export function AllowancePolicyPage() {
   const [documentText, setDocumentText] = useState("{\n  \n}");
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Which existing version's document (if any) is currently loaded into the
+  // form, and which row's fetch is in flight.
+  const [loadedFrom, setLoadedFrom] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   function refresh() {
     setLoading(true);
@@ -27,6 +32,26 @@ export function AllowancePolicyPage() {
   }
 
   useEffect(refresh, []);
+
+  async function handleUseAsStartingPoint(policy: AllowancePolicyOut) {
+    setLoadingId(policy.id);
+    setError(null);
+    setSuccess(null);
+    setJsonError(null);
+    try {
+      const detail = await api.getAllowancePolicy(policy.id);
+      setPolicyName(detail.policy_name);
+      setDocumentText(JSON.stringify(detail.document, null, 2));
+      setLoadedFrom(`${detail.policy_name} v${detail.version}`);
+      // The form sits below the version table; without this the click looks
+      // like it did nothing. (Optional-called: jsdom doesn't implement it.)
+      formRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "failed to load policy document");
+    } finally {
+      setLoadingId(null);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +71,7 @@ export function AllowancePolicyPage() {
       setSuccess(`Created ${created.policy_name} v${created.version}.`);
       setPolicyName("");
       setDocumentText("{\n  \n}");
+      setLoadedFrom(null);
       refresh();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "failed to create policy version");
@@ -88,6 +114,7 @@ export function AllowancePolicyPage() {
               <th>Version</th>
               <th>Status</th>
               <th>Created</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -99,20 +126,35 @@ export function AllowancePolicyPage() {
                   {p.is_active ? <span className="status-pill status-grounded">active</span> : "—"}
                 </td>
                 <td data-label="Created">{new Date(p.created_at).toLocaleDateString()}</td>
+                <td className="row-actions">
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => handleUseAsStartingPoint(p)}
+                    disabled={loadingId !== null}
+                  >
+                    {loadingId === p.id ? "Loading…" : "Use as starting point"}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
 
-      <form className="style-form-inline" onSubmit={handleCreate}>
+      <form className="style-form-inline" onSubmit={handleCreate} ref={formRef}>
         <h2>Create a new policy version</h2>
         <p className="style-subtitle" style={{ margin: "0 0 12px" }}>
-          Note: the backend's <code>GET /allowance-policies</code> endpoints currently return only
-          policy metadata (name, version, active flag) -- not the document content -- so an existing
-          version's document can't be pre-filled here for editing. Compose the full document from
-          scratch, or coordinate with whoever has the source JSON used for the last version.
+          Click <strong>Use as starting point</strong> on any version above to load its full
+          document here and edit it, or compose one from scratch.
         </p>
+        {loadedFrom && (
+          <div className="form-success" role="status">
+            Loaded the document from <strong>{loadedFrom}</strong>. Editing it here never changes
+            that version. Submitting creates the next version under the policy name below and makes
+            it the active one.
+          </div>
+        )}
         <label htmlFor="policy-name">Policy name</label>
         <input
           id="policy-name"
